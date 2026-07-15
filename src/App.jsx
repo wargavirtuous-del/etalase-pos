@@ -42,7 +42,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.6";
+const APP_VERSION = "0.7";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -939,27 +939,18 @@ function GudangScreen({ data, persist, role }) {
           const svg = buildBarcodeSvgString(p.barcode, 160, 46);
           const dataUrl = await svgToPngDataUrl(svg, 160, 46);
           return `<tr>
-            <td style="padding:4px 8px;border:1px solid #ddd;">${p.nama}</td>
-            <td style="padding:4px 8px;border:1px solid #ddd;">${p.sku}</td>
-            <td style="padding:4px 8px;border:1px solid #ddd;">${p.barcode}</td>
-            <td style="padding:4px 8px;border:1px solid #ddd;">${p.kategori}</td>
-            <td style="padding:4px 8px;border:1px solid #ddd;">${p.hargaJual}</td>
-            <td style="padding:4px 8px;border:1px solid #ddd;"><img src="${dataUrl}" width="160" height="46" /></td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;">
+              <div style="font-weight:bold;font-size:13px;margin-bottom:2px;">${p.nama}</div>
+              <div style="font-size:12px;margin-bottom:6px;">Rp${formatRibuan(p.hargaJual)}</div>
+              <img src="${dataUrl}" width="160" height="46" />
+            </td>
           </tr>`;
         })
       );
-      const html = `<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">
-        <thead><tr>
-          <th style="padding:4px 8px;border:1px solid #ddd;">Nama</th>
-          <th style="padding:4px 8px;border:1px solid #ddd;">SKU</th>
-          <th style="padding:4px 8px;border:1px solid #ddd;">Barcode</th>
-          <th style="padding:4px 8px;border:1px solid #ddd;">Kategori</th>
-          <th style="padding:4px 8px;border:1px solid #ddd;">Harga Jual</th>
-          <th style="padding:4px 8px;border:1px solid #ddd;">Gambar Barcode</th>
-        </tr></thead>
+      const html = `<table style="border-collapse:collapse;font-family:sans-serif;">
         <tbody>${rows.join("")}</tbody>
       </table>`;
-      const plain = selectedProducts.map((p) => [p.nama, p.sku, p.barcode, p.kategori, p.hargaJual].join("\t")).join("\n");
+      const plain = selectedProducts.map((p) => `${p.nama}\nRp${formatRibuan(p.hargaJual)}\n${p.barcode}`).join("\n\n");
 
       await navigator.clipboard.write([
         new ClipboardItem({
