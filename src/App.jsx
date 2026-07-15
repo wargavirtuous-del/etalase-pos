@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
-  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2
+  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon
 } from "lucide-react";
 
-const c = {
+const darkPalette = {
   bg: "#12171A",
   surface: "#1B2226",
   surfaceAlt: "#222B30",
@@ -19,9 +19,29 @@ const c = {
   coral: "#EF6B6B",
   coralDim: "rgba(239,107,107,0.14)",
 };
+const lightPalette = {
+  bg: "#F5F4F0",
+  surface: "#FFFFFF",
+  surfaceAlt: "#EFEEE8",
+  border: "#DEDCD4",
+  text: "#1C1F21",
+  textDim: "#6B7280",
+  mint: "#0E9F63",
+  mintDim: "rgba(14,159,99,0.12)",
+  amber: "#B07A0A",
+  amberDim: "rgba(176,122,10,0.12)",
+  coral: "#C43F3A",
+  coralDim: "rgba(196,63,58,0.10)",
+};
+let c = { ...darkPalette };
+function applyTheme(mode) {
+  Object.assign(c, mode === "light" ? lightPalette : darkPalette);
+}
 
 const STORAGE_KEY = "pos-data-v1";
-const STORE_PHONE = "0812-3456-7890";
+const SETTINGS_KEY = "pos-settings-v1";
+const STORE_NAME = "Asia Stationery and Photocopy";
+const STORE_PHONE = "0857-0703-3705";
 
 const ADMIN_ACCOUNTS = [
   { id: "wafa", password: "123456" },
@@ -46,6 +66,25 @@ const seedProducts = [
 
 function rupiah(n) {
   return "Rp" + Math.round(n).toLocaleString("id-ID");
+}
+function formatRibuan(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+function RupiahInput({ value, onChange, placeholder, className, style }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: c.textDim }}>Rp</span>
+      <input
+        value={formatRibuan(value)}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        placeholder={placeholder}
+        className={className}
+        style={{ ...style, paddingLeft: 22 }}
+      />
+    </div>
+  );
 }
 function nextSku(products) {
   const nums = products.map((p) => parseInt(p.sku.split("-")[1] || "0", 10));
@@ -119,6 +158,75 @@ function useStorage() {
   };
 
   return { data, persist, status };
+}
+
+function useSettings() {
+  const [settings, setSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { theme: "dark", kasirDisplay: "visual" };
+  });
+
+  const update = (patch) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  };
+
+  return { settings, update };
+}
+
+function SettingsModal({ settings, update, onClose }) {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+      <div className="w-80 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
+          <button onClick={onClose}><X size={16} color={c.textDim} /></button>
+        </div>
+
+        <p className="text-xs mb-2" style={{ color: c.textDim }}>Tema Aplikasi</p>
+        <div className="flex gap-2 mb-4">
+          {[{ key: "dark", label: "Gelap" }, { key: "light", label: "Terang" }].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => update({ theme: t.key })}
+              className="flex-1 py-2 rounded-lg text-xs font-medium"
+              style={{
+                backgroundColor: settings.theme === t.key ? c.mint : c.surfaceAlt,
+                color: settings.theme === t.key ? "#0B1210" : c.textDim,
+                border: `1px solid ${c.border}`,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-xs mb-2" style={{ color: c.textDim }}>Tampilan Layar Kasir</p>
+        <div className="flex gap-2">
+          {[{ key: "visual", label: "Bergambar" }, { key: "text", label: "Teks Saja" }].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => update({ kasirDisplay: t.key })}
+              className="flex-1 py-2 rounded-lg text-xs font-medium"
+              style={{
+                backgroundColor: settings.kasirDisplay === t.key ? c.mint : c.surfaceAlt,
+                color: settings.kasirDisplay === t.key ? "#0B1210" : c.textDim,
+                border: `1px solid ${c.border}`,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LoginGate({ onLogin }) {
@@ -230,13 +338,14 @@ function StokBadge({ n }) {
 }
 
 // ---------------- KASIR ----------------
-function KasirScreen({ data, persist, currentUser }) {
+function KasirScreen({ data, persist, currentUser, displayMode }) {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [splitMode, setSplitMode] = useState(false);
   const [payments, setPayments] = useState([]);
   const [kembalianTotal, setKembalianTotal] = useState(0);
   const [cashInput, setCashInput] = useState("");
+  const [cashWarning, setCashWarning] = useState("");
   const [voidConfirm, setVoidConfirm] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const inputRef = useRef(null);
@@ -294,6 +403,11 @@ function KasirScreen({ data, persist, currentUser }) {
     const diterima = parseInt(cashInput || "0", 10);
     if (!diterima || diterima <= 0) return;
     const sisaSebelum = Math.max(sisa, 0);
+    if (diterima < sisaSebelum) {
+      setCashWarning(`Uang kurang Rp${(sisaSebelum - diterima).toLocaleString("id-ID")}. Lengkapi sisa tagihan dengan cash tambahan atau metode lain.`);
+    } else {
+      setCashWarning("");
+    }
     const applied = Math.min(diterima, sisaSebelum);
     if (applied > 0) addPayment("cash", applied);
     const kembalian = diterima - applied;
@@ -337,6 +451,7 @@ function KasirScreen({ data, persist, currentUser }) {
     setSplitMode(false);
     setKembalianTotal(0);
     setCashInput("");
+    setCashWarning("");
   };
 
   const batalkanTransaksi = () => {
@@ -344,6 +459,7 @@ function KasirScreen({ data, persist, currentUser }) {
     setPayments([]);
     setKembalianTotal(0);
     setCashInput("");
+    setCashWarning("");
     setVoidConfirm(false);
   };
 
@@ -366,7 +482,29 @@ function KasirScreen({ data, persist, currentUser }) {
           />
         </div>
         <div className="grid grid-cols-3 gap-3">
-          {filtered.map((p) => {
+          {displayMode === "text" && (
+            <div className="col-span-3 rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+              {filtered.map((p) => {
+                const habis = p.etalase <= 0;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    disabled={habis}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+                    style={{ backgroundColor: c.surface, borderBottom: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
+                  >
+                    <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
+                    <div className="flex items-center gap-4">
+                      <StokBadge n={p.etalase} />
+                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {displayMode !== "text" && filtered.map((p) => {
             const habis = p.etalase <= 0;
             return (
               <button
@@ -376,8 +514,8 @@ function KasirScreen({ data, persist, currentUser }) {
                 className="text-left p-3 rounded-xl transition-transform active:scale-95"
                 style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
               >
-                <div className="w-full h-14 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: c.surfaceAlt }}>
-                  <Package size={20} color={c.textDim} />
+                <div className="w-full h-14 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
+                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={20} color={c.textDim} />}
                 </div>
                 <p className="text-sm font-medium leading-tight" style={{ color: c.text }}>{p.nama}</p>
                 <p className="text-xs font-mono mt-1" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</p>
@@ -426,12 +564,11 @@ function KasirScreen({ data, persist, currentUser }) {
             <div className="mt-2 space-y-2">
               <div className="flex gap-1.5 items-stretch">
                 <div className="flex-1 flex flex-col gap-1">
-                  <input
+                  <RupiahInput
                     value={cashInput}
-                    onChange={(e) => setCashInput(e.target.value.replace(/\D/g, ""))}
-                    onKeyDown={(e) => e.key === "Enter" && bayarCash()}
+                    onChange={(v) => { setCashInput(v); setCashWarning(""); }}
                     placeholder="Uang diterima (cash)"
-                    className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg font-mono"
+                    className="w-full text-xs bg-transparent outline-none py-1.5 pr-2 rounded-lg font-mono"
                     style={{ border: `1px solid ${c.border}`, color: c.text }}
                   />
                   <button
@@ -449,6 +586,12 @@ function KasirScreen({ data, persist, currentUser }) {
                   </button>
                 ))}
               </div>
+              {cashWarning && (
+                <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-lg text-[11px]" style={{ backgroundColor: c.coralDim, color: c.coral }}>
+                  <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                  {cashWarning}
+                </div>
+              )}
               {payments.map((p, idx) => (
                 <div key={idx} className="flex justify-between text-xs font-mono" style={{ color: c.mint }}>
                   <span className="capitalize">{p.metode}</span><span>{rupiah(p.jumlah)}</span>
@@ -490,7 +633,7 @@ function KasirScreen({ data, persist, currentUser }) {
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
             <div className="p-4 font-mono text-[11px]" style={{ color: "#111" }}>
-              <p className="text-center font-semibold">TOKO KAMU</p>
+              <p className="text-center font-semibold">{STORE_NAME}</p>
               <p className="text-center" style={{ color: "#555" }}>{receipt.id}</p>
               <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
               <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
@@ -542,8 +685,8 @@ function KatalogScreen({ data }) {
         <div className="grid grid-cols-4 gap-3">
           {data.products.map((p) => (
             <div key={p.id} className="rounded-xl p-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
-              <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: c.surfaceAlt }}>
-                <Package size={26} color={c.textDim} />
+              <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
+                {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={26} color={c.textDim} />}
               </div>
               <p className="text-sm font-medium" style={{ color: c.text }}>{p.nama}</p>
               <p className="text-xs" style={{ color: c.textDim }}>{p.kategori}</p>
@@ -583,7 +726,7 @@ function KatalogScreen({ data }) {
 function GudangScreen({ data, persist, role }) {
   const isAdmin = role === "admin";
   const [inputs, setInputs] = useState({});
-  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "" });
+  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "", foto: "" });
   const [showLabel, setShowLabel] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -611,10 +754,19 @@ function GudangScreen({ data, persist, role }) {
       hargaJual: parseInt(form.hargaJual || "0", 10),
       etalase: 0,
       gudang: parseInt(form.gudang || "0", 10),
+      foto: form.foto || "",
     };
     await persist({ ...data, products: [...data.products, newProduct] });
-    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "" });
+    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "", foto: "" });
     setShowLabel(newProduct);
+  };
+
+  const handleFotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setForm((prev) => ({ ...prev, foto: reader.result }));
+    reader.readAsDataURL(file);
   };
 
   const simpanEdit = async () => {
@@ -704,8 +856,6 @@ function GudangScreen({ data, persist, role }) {
             {[
               { key: "nama", ph: "Nama barang" },
               { key: "kategori", ph: "Kategori" },
-              { key: "hargaBeli", ph: "Harga beli" },
-              { key: "hargaJual", ph: "Harga jual" },
               { key: "gudang", ph: "Stok awal gudang" },
               { key: "barcode", ph: "Barcode pabrik (opsional, scan di sini)" },
             ].map((f) => (
@@ -718,6 +868,27 @@ function GudangScreen({ data, persist, role }) {
                 style={{ border: `1px solid ${c.border}`, color: c.text }}
               />
             ))}
+            <RupiahInput
+              value={form.hargaBeli}
+              onChange={(v) => setForm((prev) => ({ ...prev, hargaBeli: v }))}
+              placeholder="Harga beli"
+              className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg"
+              style={{ border: `1px solid ${c.border}`, color: c.text }}
+            />
+            <RupiahInput
+              value={form.hargaJual}
+              onChange={(v) => setForm((prev) => ({ ...prev, hargaJual: v }))}
+              placeholder="Harga jual"
+              className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg"
+              style={{ border: `1px solid ${c.border}`, color: c.text }}
+            />
+            <div>
+              <p className="text-[11px] mb-1" style={{ color: c.textDim }}>Foto barang (opsional)</p>
+              {form.foto && (
+                <img src={form.foto} alt="preview" className="w-full h-20 object-cover rounded-lg mb-1" />
+              )}
+              <input type="file" accept="image/*" onChange={handleFotoUpload} className="w-full text-xs" style={{ color: c.textDim }} />
+            </div>
             <button onClick={addProduct} className="w-full py-2 rounded-lg text-sm font-medium mt-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
               Simpan & Buat Barcode
             </button>
@@ -742,8 +913,8 @@ function GudangScreen({ data, persist, role }) {
             <div className="space-y-2">
               <input value={editing.nama} onChange={(e) => setEditing((prev) => ({ ...prev, nama: e.target.value }))} placeholder="Nama barang" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <input value={editing.kategori} onChange={(e) => setEditing((prev) => ({ ...prev, kategori: e.target.value }))} placeholder="Kategori" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
-              <input value={editing.hargaBeli} onChange={(e) => setEditing((prev) => ({ ...prev, hargaBeli: e.target.value.replace(/\D/g, "") }))} placeholder="Harga beli" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
-              <input value={editing.hargaJual} onChange={(e) => setEditing((prev) => ({ ...prev, hargaJual: e.target.value.replace(/\D/g, "") }))} placeholder="Harga jual" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+              <RupiahInput value={editing.hargaBeli} onChange={(v) => setEditing((prev) => ({ ...prev, hargaBeli: v }))} placeholder="Harga beli" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+              <RupiahInput value={editing.hargaJual} onChange={(v) => setEditing((prev) => ({ ...prev, hargaJual: v }))} placeholder="Harga jual" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
             </div>
             <div className="flex gap-2 mt-3">
               <button onClick={() => setEditing(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Batal</button>
@@ -1036,7 +1207,11 @@ function LaporanScreen({ data }) {
 export default function App() {
   const [tab, setTab] = useState("kasir");
   const [currentUser, setCurrentUser] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, update } = useSettings();
   const { data, persist, status } = useStorage();
+
+  applyTheme(settings.theme);
 
   if (status === "loading" || !data) {
     return (
@@ -1067,6 +1242,13 @@ export default function App() {
             {currentUser.id} · {currentUser.role}
           </span>
           <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 rounded-lg"
+            style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}
+          >
+            <SettingsIcon size={14} color={c.textDim} />
+          </button>
+          <button
             onClick={() => setCurrentUser(null)}
             className="text-xs px-3 py-1.5 rounded-lg font-medium"
             style={{ backgroundColor: c.coralDim, color: c.coral }}
@@ -1076,11 +1258,12 @@ export default function App() {
         </div>
       </div>
       <Nav tab={tab} setTab={setTab} />
-      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} />}
+      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} />}
       {tab === "katalog" && <KatalogScreen data={data} />}
       {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
       {tab === "laporan" && <LaporanScreen data={data} />}
+      {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
