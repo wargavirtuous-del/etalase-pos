@@ -42,19 +42,37 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.4";
+const APP_VERSION = "0.5";
 
-const ADMIN_ACCOUNTS = [
+const ACCOUNTS_KEY = "pos-accounts-v1";
+const DEFAULT_ADMIN_ACCOUNTS = [
   { id: "wafa", password: "123456" },
   { id: "kresno", password: "123456" },
 ];
-const KASIR_ACCOUNTS = [
+const DEFAULT_KASIR_ACCOUNTS = [
   { id: "wafa", password: "654321" },
   { id: "mario", password: "654321" },
   { id: "rezi", password: "654321" },
   { id: "kresno", password: "654321" },
   { id: "ridho", password: "654321" },
 ];
+
+function useAccounts() {
+  const [accounts, setAccounts] = useState(() => {
+    try {
+      const raw = localStorage.getItem(ACCOUNTS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { admins: DEFAULT_ADMIN_ACCOUNTS, kasirs: DEFAULT_KASIR_ACCOUNTS };
+  });
+
+  const update = (next) => {
+    setAccounts(next);
+    try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next)); } catch (e) {}
+  };
+
+  return { accounts, update };
+}
 
 const seedProducts = [
   { id: 1, sku: "TK-0001", barcode: "8991002100019", nama: "Kopi Bubuk 200g", kategori: "Minuman", satuan: "pcs", hargaBeli: 17000, hargaJual: 24000, etalase: 18, gudang: 60 },
@@ -181,10 +199,113 @@ function useSettings() {
   return { settings, update };
 }
 
-function SettingsModal({ settings, update, onClose }) {
+function ChangePasswordSection({ currentUser, accounts, updateAccounts }) {
+  const [oldPass, setOldPass] = useState("");
+  const [newId, setNewId] = useState(currentUser.id);
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [msg, setMsg] = useState({ type: "", text: "" });
+
+  const listKey = currentUser.role === "admin" ? "admins" : "kasirs";
+  const list = accounts[listKey];
+  const me = list.find((a) => a.id === currentUser.id);
+
+  const submit = () => {
+    if (!me || me.password !== oldPass) {
+      setMsg({ type: "error", text: "Password lama salah." });
+      return;
+    }
+    if (!newPass || newPass.length < 4) {
+      setMsg({ type: "error", text: "Password baru minimal 4 karakter." });
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setMsg({ type: "error", text: "Konfirmasi password baru tidak cocok." });
+      return;
+    }
+    const newList = list.map((a) => (a.id === currentUser.id ? { ...a, id: newId.trim() || a.id, password: newPass } : a));
+    updateAccounts({ ...accounts, [listKey]: newList });
+    setMsg({ type: "ok", text: "Password berhasil diubah." });
+    setOldPass(""); setNewPass(""); setConfirmPass("");
+
+    const waText = `Konfirmasi: password akun ${currentUser.role} "${currentUser.id}" baru saja diubah pada ${new Date().toLocaleString("id-ID")}.`;
+    const waUrl = `https://wa.me/62${STORE_PHONE.replace(/\D/g, "").replace(/^0/, "")}?text=${encodeURIComponent(waText)}`;
+    window.open(waUrl, "_blank");
+  };
+
+  return (
+    <div className="mb-4">
+      <p className="text-xs mb-2" style={{ color: c.textDim }}>Ganti ID & Password Saya</p>
+      <div className="space-y-1.5">
+        <input type="password" value={oldPass} onChange={(e) => setOldPass(e.target.value)} placeholder="Password lama" className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+        <input value={newId} onChange={(e) => setNewId(e.target.value)} placeholder="ID baru" className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+        <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} placeholder="Password baru" className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+        <input type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Konfirmasi password baru" className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+        {msg.text && <p className="text-[11px]" style={{ color: msg.type === "error" ? c.coral : c.mint }}>{msg.text}</p>}
+        <button onClick={submit} className="w-full py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+          Simpan Perubahan
+        </button>
+        <p className="text-[10px]" style={{ color: c.textDim }}>
+          Setelah disimpan, WhatsApp akan terbuka otomatis untuk kirim konfirmasi ke nomor toko.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ManageAccountsSection({ accounts, updateAccounts }) {
+  const [resetting, setResetting] = useState(null); // { list, id }
+  const [newPass, setNewPass] = useState("");
+
+  const doReset = () => {
+    if (!newPass || newPass.length < 4) return;
+    const list = accounts[resetting.list];
+    const newList = list.map((a) => (a.id === resetting.id ? { ...a, password: newPass } : a));
+    updateAccounts({ ...accounts, [resetting.list]: newList });
+    setResetting(null);
+    setNewPass("");
+  };
+
+  return (
+    <div className="mb-2">
+      <p className="text-xs mb-2" style={{ color: c.textDim }}>Kelola Akun (Reset Password)</p>
+      <div className="space-y-1 max-h-40 overflow-y-auto">
+        {["admins", "kasirs"].map((listKey) =>
+          accounts[listKey].map((a) => (
+            <div key={listKey + a.id} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }}>
+              <span style={{ color: c.text }}>{a.id} <span style={{ color: c.textDim }}>({listKey === "admins" ? "admin" : "kasir"})</span></span>
+              {resetting?.list === listKey && resetting?.id === a.id ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    autoFocus
+                    type="password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && doReset()}
+                    placeholder="Password baru"
+                    className="text-[11px] bg-transparent outline-none px-1.5 py-1 rounded"
+                    style={{ border: `1px solid ${c.border}`, color: c.text, width: 90 }}
+                  />
+                  <button onClick={doReset} className="text-[11px] px-2 py-1 rounded" style={{ backgroundColor: c.mint, color: "#0B1210" }}>OK</button>
+                  <button onClick={() => { setResetting(null); setNewPass(""); }} className="text-[11px] px-1.5 py-1" style={{ color: c.textDim }}>✕</button>
+                </div>
+              ) : (
+                <button onClick={() => setResetting({ list: listKey, id: a.id })} className="text-[11px] px-2 py-1 rounded" style={{ backgroundColor: c.surface, color: c.textDim, border: `1px solid ${c.border}` }}>
+                  Reset
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SettingsModal({ settings, update, onClose, currentUser, accounts, updateAccounts }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-      <div className="w-80 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+      <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
           <button onClick={onClose}><X size={16} color={c.textDim} /></button>
@@ -209,7 +330,7 @@ function SettingsModal({ settings, update, onClose }) {
         </div>
 
         <p className="text-xs mb-2" style={{ color: c.textDim }}>Tampilan Layar Kasir</p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-5">
           {[{ key: "visual", label: "Bergambar" }, { key: "text", label: "Teks Saja" }].map((t) => (
             <button
               key={t.key}
@@ -225,19 +346,26 @@ function SettingsModal({ settings, update, onClose }) {
             </button>
           ))}
         </div>
+
+        <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 14 }}>
+          <ChangePasswordSection currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />
+          {currentUser.role === "admin" && (
+            <ManageAccountsSection accounts={accounts} updateAccounts={updateAccounts} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function LoginGate({ onLogin }) {
+function LoginGate({ onLogin, accounts }) {
   const [mode, setMode] = useState(null); // 'admin' | 'kasir'
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const submit = () => {
-    const list = mode === "admin" ? ADMIN_ACCOUNTS : KASIR_ACCOUNTS;
+    const list = mode === "admin" ? accounts.admins : accounts.kasirs;
     const found = list.find((a) => a.id.toLowerCase() === id.trim().toLowerCase() && a.password === password);
     if (!found) {
       setError("ID atau password salah.");
@@ -293,6 +421,15 @@ function LoginGate({ onLogin }) {
                 Masuk
               </button>
             </div>
+            <a
+              href={`https://wa.me/62${STORE_PHONE.replace(/\D/g, "").replace(/^0/, "")}?text=${encodeURIComponent(`Halo, saya lupa password akun ${mode} dengan ID: ${id || "(isi ID kamu)"}. Mohon bantuan reset password.`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-center text-[11px] mt-2 underline"
+              style={{ color: c.textDim }}
+            >
+              Lupa password? Hubungi toko via WhatsApp
+            </a>
           </div>
         )}
       </div>
@@ -652,8 +789,6 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
               {receipt.kembalian > 0 && (
                 <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
               )}
-              <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
-              <p className="text-center" style={{ color: "#888" }}>Kasir: {receipt.kasir}</p>
             </div>
             <div className="flex gap-2 p-3" style={{ backgroundColor: "#eee" }}>
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
@@ -731,6 +866,35 @@ function GudangScreen({ data, persist, role }) {
   const [showLabel, setShowLabel] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [selected, setSelected] = useState([]);
+  const [bulkPrint, setBulkPrint] = useState(false);
+
+  const toggleSelect = (id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const toggleSelectAll = () => {
+    setSelected((prev) => (prev.length === data.products.length ? [] : data.products.map((p) => p.id)));
+  };
+  const selectedProducts = data.products.filter((p) => selected.includes(p.id));
+
+  const copySelected = async () => {
+    const header = ["Nama", "SKU", "Barcode", "Kategori", "Harga Jual"].join("\t");
+    const rows = selectedProducts.map((p) => [p.nama, p.sku, p.barcode, p.kategori, p.hargaJual].join("\t"));
+    try { await navigator.clipboard.writeText([header, ...rows].join("\n")); } catch (e) {}
+  };
+
+  const downloadCSV = () => {
+    const header = ["Nama", "SKU", "Barcode", "Kategori", "Harga Jual"].join(",");
+    const rows = selectedProducts.map((p) => [`"${p.nama}"`, p.sku, p.barcode, `"${p.kategori}"`, p.hargaJual].join(","));
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "barang-terpilih.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const doTransfer = async (p) => {
     const jumlah = parseInt(inputs[p.id] || "0", 10);
@@ -795,11 +959,27 @@ function GudangScreen({ data, persist, role }) {
 
   return (
     <div className="p-5 flex gap-5">
-      <div className="flex-1 space-y-5">
+      <div className="flex-1 space-y-3">
+        {selected.length > 0 && (
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: c.mintDim, border: `1px solid ${c.mint}` }}>
+            <span className="text-xs font-medium" style={{ color: c.mint }}>{selected.length} barang dipilih</span>
+            <div className="flex gap-2">
+              <button onClick={copySelected} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Data</button>
+              <button onClick={downloadCSV} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Download CSV</button>
+              <button onClick={() => setBulkPrint(true)} className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+                <Printer size={12} /> Cetak Label Terpilih
+              </button>
+              <button onClick={() => setSelected([])} className="text-xs px-2 py-1.5 rounded-lg" style={{ color: c.textDim }}>✕</button>
+            </div>
+          </div>
+        )}
         <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                <th className="px-3 py-2">
+                  <input type="checkbox" checked={selected.length === data.products.length && data.products.length > 0} onChange={toggleSelectAll} />
+                </th>
                 <th className="text-left px-4 py-2 font-medium">Barang</th>
                 <th className="text-right px-4 py-2 font-medium">Gudang</th>
                 <th className="text-right px-4 py-2 font-medium">Etalase</th>
@@ -811,6 +991,9 @@ function GudangScreen({ data, persist, role }) {
             <tbody>
               {data.products.map((p) => (
                 <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                  <td className="px-3 py-2 text-center">
+                    <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} />
+                  </td>
                   <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
                   <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.gudang}</td>
                   <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.etalase}</td>
@@ -948,6 +1131,28 @@ function GudangScreen({ data, persist, role }) {
               <button onClick={() => setShowLabel(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#eee", color: "#111" }}>Tutup</button>
               <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
                 <Printer size={12} /> Cetak Label
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkPrint && (
+        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: "#fff", width: 260 }}>
+            <div className="grid grid-cols-1 gap-3">
+              {selectedProducts.map((p) => (
+                <div key={p.id} className="pb-3" style={{ borderBottom: "1px dashed #ccc" }}>
+                  <p className="text-xs font-semibold text-center mb-1" style={{ color: "#111" }}>{p.nama}</p>
+                  <p className="text-xs text-center mb-2" style={{ color: "#333" }}>{rupiah(p.hargaJual)}</p>
+                  <BarcodeSVG value={p.barcode} width={220} />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setBulkPrint(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#eee", color: "#111" }}>Tutup</button>
+              <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+                <Printer size={12} /> Cetak Semua
               </button>
             </div>
           </div>
@@ -1210,6 +1415,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const { settings, update } = useSettings();
+  const { accounts, update: updateAccounts } = useAccounts();
   const { data, persist, status } = useStorage();
 
   applyTheme(settings.theme);
@@ -1225,7 +1431,7 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <LoginGate onLogin={setCurrentUser} />;
+    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
   }
 
   return (
@@ -1266,7 +1472,7 @@ export default function App() {
       {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
       {tab === "laporan" && <LaporanScreen data={data} />}
-      {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />}
     </div>
   );
 }
