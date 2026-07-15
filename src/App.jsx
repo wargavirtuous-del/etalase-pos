@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
-  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon
+  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet
 } from "lucide-react";
 
 const darkPalette = {
@@ -42,7 +42,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.7";
+const APP_VERSION = "0.8";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -740,25 +740,25 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
             </button>
           ) : (
             <div className="mt-2 space-y-2">
-              <div className="flex gap-1.5 items-stretch">
-                <div className="flex-1 flex flex-col gap-1">
-                  <RupiahInput
-                    value={cashInput}
-                    onChange={(v) => { setCashInput(v); setCashWarning(""); }}
-                    placeholder="Uang diterima (cash)"
-                    className="w-full text-xs bg-transparent outline-none py-1.5 pr-2 rounded-lg font-mono"
-                    style={{ border: `1px solid ${c.border}`, color: c.text }}
-                  />
-                  <button
-                    onClick={bayarCash}
-                    disabled={sisa <= 0}
-                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
-                    style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
-                  >
-                    <Banknote size={12} /> Bayar Cash
-                  </button>
-                </div>
-                {[{ key: "qris", icon: QrCode }, { key: "debit", icon: CreditCard }].map(({ key, icon: Icon }) => (
+              <div className="flex flex-col gap-1">
+                <RupiahInput
+                  value={cashInput}
+                  onChange={(v) => { setCashInput(v); setCashWarning(""); }}
+                  placeholder="Uang diterima (cash)"
+                  className="w-full text-xs bg-transparent outline-none py-1.5 pr-2 rounded-lg font-mono"
+                  style={{ border: `1px solid ${c.border}`, color: c.text }}
+                />
+                <button
+                  onClick={bayarCash}
+                  disabled={sisa <= 0}
+                  className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
+                  style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+                >
+                  <Banknote size={12} /> Bayar Cash
+                </button>
+              </div>
+              <div className="flex gap-1.5">
+                {[{ key: "qris", icon: QrCode }, { key: "debit", icon: CreditCard }, { key: "cashless", icon: Wallet }].map(({ key, icon: Icon }) => (
                   <button key={key} onClick={() => addPayment(key, Math.max(sisa, 0))} disabled={sisa <= 0} className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
                     <Icon size={14} />{key}
                   </button>
