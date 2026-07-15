@@ -42,6 +42,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
+const APP_VERSION = "0.4";
 
 const ADMIN_ACCOUNTS = [
   { id: "wafa", password: "123456" },
@@ -1231,7 +1232,9 @@ export default function App() {
     <div className="w-full min-h-screen font-sans" style={{ backgroundColor: c.bg }}>
       <div className="px-5 pt-5 flex items-center justify-between">
         <div>
-          <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>Etalase — Aplikasi Kasir</p>
+          <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
+            Etalase — Aplikasi Kasir <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
+          </p>
           <p className="text-xs mt-0.5" style={{ color: c.textDim }}>Data tersimpan otomatis di sesi kamu</p>
         </div>
         <div className="flex items-center gap-2">
