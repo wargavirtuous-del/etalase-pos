@@ -42,7 +42,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.5";
+const APP_VERSION = "0.6";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -118,6 +118,46 @@ function genBarcodeDigits(id) {
   }
   const check = (10 - (sum % 10)) % 10;
   return base + check;
+}
+
+function buildBarcodeSvgString(value, width = 160, height = 46) {
+  let seed = 0;
+  for (let i = 0; i < value.length; i++) seed += value.charCodeAt(i) * (i + 1);
+  let x = 4;
+  const usable = width - 8;
+  const n = value.length * 3;
+  const unit = usable / n;
+  let bars = "";
+  for (let i = 0; i < n; i++) {
+    const v = (seed * (i + 7) * 13) % 5;
+    const w = unit * (0.5 + (v % 3) * 0.4);
+    if (i % 2 === 0) {
+      bars += `<rect x="${x}" y="4" width="${Math.max(1, w)}" height="${height - 16}" fill="#000" />`;
+    }
+    x += w;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>${bars}<text x="${width / 2}" y="${height - 4}" font-size="9" font-family="monospace" fill="#111" text-anchor="middle">${value}</text></svg>`;
+}
+
+function svgToPngDataUrl(svgMarkup, width, height) {
+  return new Promise((resolve, reject) => {
+    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 // --- Minimal Code128-ish visual barcode (bars purely illustrative, not scannable-grade) ---
@@ -877,10 +917,62 @@ function GudangScreen({ data, persist, role }) {
   };
   const selectedProducts = data.products.filter((p) => selected.includes(p.id));
 
+  const [copyMsg, setCopyMsg] = useState("");
+
   const copySelected = async () => {
     const header = ["Nama", "SKU", "Barcode", "Kategori", "Harga Jual"].join("\t");
     const rows = selectedProducts.map((p) => [p.nama, p.sku, p.barcode, p.kategori, p.hargaJual].join("\t"));
-    try { await navigator.clipboard.writeText([header, ...rows].join("\n")); } catch (e) {}
+    try {
+      await navigator.clipboard.writeText([header, ...rows].join("\n"));
+      setCopyMsg("Kode tersalin (teks saja).");
+    } catch (e) {
+      setCopyMsg("Gagal menyalin.");
+    }
+    setTimeout(() => setCopyMsg(""), 2500);
+  };
+
+  const copySelectedWithBarcode = async () => {
+    setCopyMsg("Menyiapkan gambar barcode...");
+    try {
+      const rows = await Promise.all(
+        selectedProducts.map(async (p) => {
+          const svg = buildBarcodeSvgString(p.barcode, 160, 46);
+          const dataUrl = await svgToPngDataUrl(svg, 160, 46);
+          return `<tr>
+            <td style="padding:4px 8px;border:1px solid #ddd;">${p.nama}</td>
+            <td style="padding:4px 8px;border:1px solid #ddd;">${p.sku}</td>
+            <td style="padding:4px 8px;border:1px solid #ddd;">${p.barcode}</td>
+            <td style="padding:4px 8px;border:1px solid #ddd;">${p.kategori}</td>
+            <td style="padding:4px 8px;border:1px solid #ddd;">${p.hargaJual}</td>
+            <td style="padding:4px 8px;border:1px solid #ddd;"><img src="${dataUrl}" width="160" height="46" /></td>
+          </tr>`;
+        })
+      );
+      const html = `<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">
+        <thead><tr>
+          <th style="padding:4px 8px;border:1px solid #ddd;">Nama</th>
+          <th style="padding:4px 8px;border:1px solid #ddd;">SKU</th>
+          <th style="padding:4px 8px;border:1px solid #ddd;">Barcode</th>
+          <th style="padding:4px 8px;border:1px solid #ddd;">Kategori</th>
+          <th style="padding:4px 8px;border:1px solid #ddd;">Harga Jual</th>
+          <th style="padding:4px 8px;border:1px solid #ddd;">Gambar Barcode</th>
+        </tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>`;
+      const plain = selectedProducts.map((p) => [p.nama, p.sku, p.barcode, p.kategori, p.hargaJual].join("\t")).join("\n");
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+        }),
+      ]);
+      setCopyMsg("Kode + gambar barcode tersalin! Paste ke Word/Google Docs.");
+    } catch (e) {
+      console.error(e);
+      setCopyMsg("Gagal menyalin gambar. Pastikan pakai Chrome/Edge versi terbaru.");
+    }
+    setTimeout(() => setCopyMsg(""), 3500);
   };
 
   const downloadCSV = () => {
@@ -961,16 +1053,20 @@ function GudangScreen({ data, persist, role }) {
     <div className="p-5 flex gap-5">
       <div className="flex-1 space-y-3">
         {selected.length > 0 && (
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: c.mintDim, border: `1px solid ${c.mint}` }}>
-            <span className="text-xs font-medium" style={{ color: c.mint }}>{selected.length} barang dipilih</span>
-            <div className="flex gap-2">
-              <button onClick={copySelected} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Data</button>
-              <button onClick={downloadCSV} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Download CSV</button>
-              <button onClick={() => setBulkPrint(true)} className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
-                <Printer size={12} /> Cetak Label Terpilih
-              </button>
-              <button onClick={() => setSelected([])} className="text-xs px-2 py-1.5 rounded-lg" style={{ color: c.textDim }}>✕</button>
+          <div className="px-3 py-2 rounded-lg" style={{ backgroundColor: c.mintDim, border: `1px solid ${c.mint}` }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium" style={{ color: c.mint }}>{selected.length} barang dipilih</span>
+              <div className="flex gap-2">
+                <button onClick={copySelected} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Kode</button>
+                <button onClick={copySelectedWithBarcode} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Kode + Barcode</button>
+                <button onClick={downloadCSV} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Download CSV</button>
+                <button onClick={() => setBulkPrint(true)} className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+                  <Printer size={12} /> Cetak Label Terpilih
+                </button>
+                <button onClick={() => setSelected([])} className="text-xs px-2 py-1.5 rounded-lg" style={{ color: c.textDim }}>✕</button>
+              </div>
             </div>
+            {copyMsg && <p className="text-[11px] mt-1.5" style={{ color: c.mint }}>{copyMsg}</p>}
           </div>
         )}
         <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
