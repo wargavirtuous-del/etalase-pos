@@ -23,6 +23,18 @@ const c = {
 const STORAGE_KEY = "pos-data-v1";
 const STORE_PHONE = "0812-3456-7890";
 
+const ADMIN_ACCOUNTS = [
+  { id: "wafa", password: "123456" },
+  { id: "kresno", password: "123456" },
+];
+const KASIR_ACCOUNTS = [
+  { id: "wafa", password: "654321" },
+  { id: "mario", password: "654321" },
+  { id: "rezi", password: "654321" },
+  { id: "kresno", password: "654321" },
+  { id: "ridho", password: "654321" },
+];
+
 const seedProducts = [
   { id: 1, sku: "TK-0001", barcode: "8991002100019", nama: "Kopi Bubuk 200g", kategori: "Minuman", satuan: "pcs", hargaBeli: 17000, hargaJual: 24000, etalase: 18, gudang: 60 },
   { id: 2, sku: "TK-0002", barcode: "8991002100026", nama: "Gula Pasir 1kg", kategori: "Sembako", satuan: "pcs", hargaBeli: 12500, hargaJual: 15500, etalase: 6, gudang: 40 },
@@ -109,6 +121,76 @@ function useStorage() {
   return { data, persist, status };
 }
 
+function LoginGate({ onLogin }) {
+  const [mode, setMode] = useState(null); // 'admin' | 'kasir'
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const submit = () => {
+    const list = mode === "admin" ? ADMIN_ACCOUNTS : KASIR_ACCOUNTS;
+    const found = list.find((a) => a.id.toLowerCase() === id.trim().toLowerCase() && a.password === password);
+    if (!found) {
+      setError("ID atau password salah.");
+      return;
+    }
+    onLogin({ id: found.id, role: mode });
+  };
+
+  return (
+    <div className="w-full min-h-screen flex items-center justify-center font-sans" style={{ backgroundColor: c.bg }}>
+      <div className="w-80 rounded-2xl p-6" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+        <p className="text-lg font-semibold tracking-tight text-center mb-1" style={{ color: c.text }}>Etalase — Aplikasi Kasir</p>
+        <p className="text-xs text-center mb-5" style={{ color: c.textDim }}>Masuk untuk melanjutkan</p>
+
+        {!mode ? (
+          <div className="space-y-2">
+            <button onClick={() => setMode("admin")} className="w-full py-3 rounded-lg text-sm font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+              Masuk sebagai Admin
+            </button>
+            <button onClick={() => setMode("kasir")} className="w-full py-3 rounded-lg text-sm font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
+              Masuk sebagai Kasir
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs mb-2 capitalize" style={{ color: c.textDim }}>Login {mode}</p>
+            <input
+              value={id}
+              onChange={(e) => { setId(e.target.value); setError(""); }}
+              placeholder="ID"
+              className="w-full text-sm bg-transparent outline-none px-3 py-2 rounded-lg"
+              style={{ border: `1px solid ${c.border}`, color: c.text }}
+            />
+            <input
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              type="password"
+              placeholder="Password"
+              className="w-full text-sm bg-transparent outline-none px-3 py-2 rounded-lg"
+              style={{ border: `1px solid ${c.border}`, color: c.text }}
+            />
+            {error && <p className="text-xs" style={{ color: c.coral }}>{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { setMode(null); setId(""); setPassword(""); setError(""); }}
+                className="flex-1 py-2 rounded-lg text-xs"
+                style={{ backgroundColor: c.surfaceAlt, color: c.text }}
+              >
+                Kembali
+              </button>
+              <button onClick={submit} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+                Masuk
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Nav({ tab, setTab }) {
   const items = [
     { key: "kasir", label: "Kasir", icon: ShoppingCart },
@@ -142,40 +224,26 @@ function Nav({ tab, setTab }) {
   );
 }
 
-function RoleSwitch({ role, setRole }) {
-  return (
-    <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-      {["admin", "kasir"].map((r) => (
-        <button
-          key={r}
-          onClick={() => setRole(r)}
-          className="px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors"
-          style={{
-            backgroundColor: role === r ? c.mint : "transparent",
-            color: role === r ? "#0B1210" : c.textDim,
-          }}
-        >
-          {r}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function StokBadge({ n }) {
   const color = n <= 0 ? c.coral : n <= 5 ? c.amber : c.textDim;
   return <span className="font-mono text-[11px]" style={{ color }}>Stok: {n}</span>;
 }
 
 // ---------------- KASIR ----------------
-function KasirScreen({ data, persist }) {
+function KasirScreen({ data, persist, currentUser }) {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [splitMode, setSplitMode] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [kembalianTotal, setKembalianTotal] = useState(0);
+  const [cashInput, setCashInput] = useState("");
   const [voidConfirm, setVoidConfirm] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [cart.length, receipt]);
 
   const products = data.products;
   const filtered = products.filter(
@@ -217,9 +285,20 @@ function KasirScreen({ data, persist }) {
   const paid = payments.reduce((s, p) => s + p.jumlah, 0);
   const sisa = total - paid;
 
-  const addPayment = (metode) => {
-    if (sisa <= 0) return;
-    setPayments((prev) => [...prev, { metode, jumlah: sisa }]);
+  const addPayment = (metode, jumlah) => {
+    if (jumlah <= 0) return;
+    setPayments((prev) => [...prev, { metode, jumlah }]);
+  };
+
+  const bayarCash = () => {
+    const diterima = parseInt(cashInput || "0", 10);
+    if (!diterima || diterima <= 0) return;
+    const sisaSebelum = Math.max(sisa, 0);
+    const applied = Math.min(diterima, sisaSebelum);
+    if (applied > 0) addPayment("cash", applied);
+    const kembalian = diterima - applied;
+    if (kembalian > 0) setKembalianTotal((prev) => prev + kembalian);
+    setCashInput("");
   };
 
   const selesaikanTransaksi = async () => {
@@ -231,9 +310,11 @@ function KasirScreen({ data, persist }) {
     const trx = {
       id: invoice,
       tanggal: new Date().toISOString(),
+      kasir: currentUser?.id || "-",
       items: cart.map((i) => ({ id: i.id, nama: i.nama, qty: i.qty, harga: i.hargaJual, hargaBeli: i.hargaBeli })),
       total,
       payments,
+      kembalian: kembalianTotal,
       status: "selesai",
     };
     const newMovements = cart.map((i) => ({
@@ -254,11 +335,15 @@ function KasirScreen({ data, persist }) {
     setCart([]);
     setPayments([]);
     setSplitMode(false);
+    setKembalianTotal(0);
+    setCashInput("");
   };
 
   const batalkanTransaksi = () => {
     setCart([]);
     setPayments([]);
+    setKembalianTotal(0);
+    setCashInput("");
     setVoidConfirm(false);
   };
 
@@ -339,9 +424,27 @@ function KasirScreen({ data, persist }) {
             </button>
           ) : (
             <div className="mt-2 space-y-2">
-              <div className="flex gap-1.5">
-                {[{ key: "cash", icon: Banknote }, { key: "qris", icon: QrCode }, { key: "debit", icon: CreditCard }].map(({ key, icon: Icon }) => (
-                  <button key={key} onClick={() => addPayment(key)} disabled={sisa <= 0} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
+              <div className="flex gap-1.5 items-stretch">
+                <div className="flex-1 flex flex-col gap-1">
+                  <input
+                    value={cashInput}
+                    onChange={(e) => setCashInput(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => e.key === "Enter" && bayarCash()}
+                    placeholder="Uang diterima (cash)"
+                    className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg font-mono"
+                    style={{ border: `1px solid ${c.border}`, color: c.text }}
+                  />
+                  <button
+                    onClick={bayarCash}
+                    disabled={sisa <= 0}
+                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
+                    style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+                  >
+                    <Banknote size={12} /> Bayar Cash
+                  </button>
+                </div>
+                {[{ key: "qris", icon: QrCode }, { key: "debit", icon: CreditCard }].map(({ key, icon: Icon }) => (
+                  <button key={key} onClick={() => addPayment(key, Math.max(sisa, 0))} disabled={sisa <= 0} className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
                     <Icon size={14} />{key}
                   </button>
                 ))}
@@ -354,6 +457,11 @@ function KasirScreen({ data, persist }) {
               <div className="flex justify-between text-xs font-mono pt-1" style={{ color: sisa > 0 ? c.amber : c.mint, borderTop: `1px solid ${c.border}` }}>
                 <span>Sisa</span><span>{rupiah(Math.max(sisa, 0))}</span>
               </div>
+              {kembalianTotal > 0 && (
+                <div className="flex justify-between text-xs font-mono" style={{ color: c.amber }}>
+                  <span>Kembalian</span><span>{rupiah(kembalianTotal)}</span>
+                </div>
+              )}
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setVoidConfirm(true)} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coralDim, color: c.coral }}>Batalkan</button>
                 <button onClick={selesaikanTransaksi} disabled={sisa > 0} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: sisa <= 0 ? c.mint : c.surfaceAlt, color: sisa <= 0 ? "#0B1210" : c.textDim }}>
@@ -397,6 +505,11 @@ function KasirScreen({ data, persist }) {
               {receipt.payments.map((p, idx) => (
                 <div key={idx} className="flex justify-between capitalize" style={{ color: "#555" }}><span>{p.metode}</span><span>{rupiah(p.jumlah)}</span></div>
               ))}
+              {receipt.kembalian > 0 && (
+                <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
+              )}
+              <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
+              <p className="text-center" style={{ color: "#888" }}>Kasir: {receipt.kasir}</p>
             </div>
             <div className="flex gap-2 p-3" style={{ backgroundColor: "#eee" }}>
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
@@ -470,7 +583,7 @@ function KatalogScreen({ data }) {
 function GudangScreen({ data, persist, role }) {
   const isAdmin = role === "admin";
   const [inputs, setInputs] = useState({});
-  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "" });
+  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "" });
   const [showLabel, setShowLabel] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -488,7 +601,7 @@ function GudangScreen({ data, persist, role }) {
     if (!form.nama || !form.hargaJual) return;
     const id = Math.max(0, ...data.products.map((p) => p.id)) + 1;
     const sku = nextSku(data.products);
-    const barcode = genBarcodeDigits(id);
+    const barcode = form.barcode.trim() ? form.barcode.trim() : genBarcodeDigits(id);
     const newProduct = {
       id, sku, barcode,
       nama: form.nama,
@@ -500,7 +613,7 @@ function GudangScreen({ data, persist, role }) {
       gudang: parseInt(form.gudang || "0", 10),
     };
     await persist({ ...data, products: [...data.products, newProduct] });
-    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "" });
+    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "" });
     setShowLabel(newProduct);
   };
 
@@ -594,6 +707,7 @@ function GudangScreen({ data, persist, role }) {
               { key: "hargaBeli", ph: "Harga beli" },
               { key: "hargaJual", ph: "Harga jual" },
               { key: "gudang", ph: "Stok awal gudang" },
+              { key: "barcode", ph: "Barcode pabrik (opsional, scan di sini)" },
             ].map((f) => (
               <input
                 key={f.key}
@@ -608,7 +722,7 @@ function GudangScreen({ data, persist, role }) {
               Simpan & Buat Barcode
             </button>
             <p className="text-[11px]" style={{ color: c.textDim }}>
-              SKU & barcode dibuat otomatis karena barang belum punya barcode dari pabrik.
+              Kalau barang sudah punya barcode dari pabrik, scan/ketik di kolom "Barcode pabrik". Kalau dikosongkan, sistem buat barcode sendiri otomatis.
             </p>
           </div>
         </div>
@@ -747,31 +861,72 @@ function OpnameScreen({ data, persist }) {
   );
 }
 
-// ---------------- LAPORAN ----------------
+function CopyButton({ getText }) {
+  const [copied, setCopied] = useState(false);
+  const doCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(getText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error("Gagal menyalin", e);
+    }
+  };
+  return (
+    <button onClick={doCopy} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: copied ? c.mintDim : c.surfaceAlt, color: copied ? c.mint : c.textDim }}>
+      {copied ? "Tersalin ✓" : "Copy"}
+    </button>
+  );
+}
+
 function LaporanScreen({ data }) {
   const trx = data.transactions;
   const omzet = trx.reduce((s, t) => s + t.total, 0);
   const labaKotor = trx.reduce((s, t) => s + t.items.reduce((ss, it) => ss + (it.harga - it.hargaBeli) * it.qty, 0), 0);
   const jumlahTrx = trx.length;
 
-  // laba per kategori — perlu lookup kategori dari master produk (karena item transaksi tidak simpan kategori)
   const kategoriMap = Object.fromEntries(data.products.map((p) => [p.id, p.kategori]));
-  const perKategori = {};
-  trx.forEach((t) => {
-    t.items.forEach((it) => {
-      const kat = kategoriMap[it.id] || "Tidak diketahui";
-      if (!perKategori[kat]) perKategori[kat] = { omzet: 0, laba: 0, unit: 0 };
-      perKategori[kat].omzet += it.harga * it.qty;
-      perKategori[kat].laba += (it.harga - it.hargaBeli) * it.qty;
-      perKategori[kat].unit += it.qty;
-    });
-  });
-  const kategoriRows = Object.entries(perKategori).sort((a, b) => b[1].laba - a[1].laba);
 
-  // audit: keluar tercatat di transaksi vs movements tipe 'keluar'
+  // flatten: satu baris per item per transaksi
+  const flatRows = trx.flatMap((t) =>
+    t.items.map((it) => ({
+      waktu: t.tanggal,
+      invoice: t.id,
+      kasir: t.kasir || "-",
+      kategori: kategoriMap[it.id] || "Tidak diketahui",
+      nama: it.nama,
+      qty: it.qty,
+      omzet: it.harga * it.qty,
+      laba: (it.harga - it.hargaBeli) * it.qty,
+    }))
+  ).sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
+
   const totalUnitTerjual = trx.reduce((s, t) => s + t.items.reduce((ss, it) => ss + it.qty, 0), 0);
   const totalUnitMovementKeluar = data.movements.filter((m) => m.tipe === "keluar").reduce((s, m) => s + m.jumlah, 0);
   const balance = totalUnitTerjual === totalUnitMovementKeluar;
+
+  const [searchLaba, setSearchLaba] = useState("");
+  const [searchRiwayat, setSearchRiwayat] = useState("");
+
+  const labaRows = flatRows.filter((r) =>
+    (r.kategori + r.nama).toLowerCase().includes(searchLaba.toLowerCase())
+  );
+  const riwayatRows = flatRows.filter((r) =>
+    (r.kategori + r.nama + r.invoice + r.kasir).toLowerCase().includes(searchRiwayat.toLowerCase())
+  );
+
+  const fmtWaktu = (w) => new Date(w).toLocaleString("id-ID");
+
+  const labaTextForCopy = () => {
+    const header = ["Waktu", "Kategori", "Barang", "Unit Terjual", "Omzet", "Laba Kotor"].join("\t");
+    const rows = labaRows.map((r) => [fmtWaktu(r.waktu), r.kategori, r.nama, r.qty, r.omzet, r.laba].join("\t"));
+    return [header, ...rows].join("\n");
+  };
+  const riwayatTextForCopy = () => {
+    const header = ["Waktu", "Kategori", "Barang", "Invoice", "Item", "Total", "Kasir"].join("\t");
+    const rows = riwayatRows.map((r) => [fmtWaktu(r.waktu), r.kategori, r.nama, r.invoice, r.qty, r.omzet, r.kasir].join("\t"));
+    return [header, ...rows].join("\n");
+  };
 
   return (
     <div className="p-5 space-y-5">
@@ -790,27 +945,40 @@ function LaporanScreen({ data }) {
       </div>
 
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: c.text }}>Laba per Kategori</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>Laba per Kategori</p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+              <Search size={12} color={c.textDim} />
+              <input value={searchLaba} onChange={(e) => setSearchLaba(e.target.value)} placeholder="Cari kategori/barang..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
+            </div>
+            <CopyButton getText={labaTextForCopy} />
+          </div>
+        </div>
         <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                <th className="text-left px-4 py-2 font-medium">Waktu</th>
                 <th className="text-left px-4 py-2 font-medium">Kategori</th>
+                <th className="text-left px-4 py-2 font-medium">Barang</th>
                 <th className="text-right px-4 py-2 font-medium">Unit Terjual</th>
                 <th className="text-right px-4 py-2 font-medium">Omzet</th>
                 <th className="text-right px-4 py-2 font-medium">Laba Kotor</th>
               </tr>
             </thead>
             <tbody>
-              {kategoriRows.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Belum ada data transaksi.</td></tr>
+              {labaRows.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
               )}
-              {kategoriRows.map(([kat, v]) => (
-                <tr key={kat} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                  <td className="px-4 py-2" style={{ color: c.text }}>{kat}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{v.unit}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(v.omzet)}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(v.laba)}</td>
+              {labaRows.map((r, idx) => (
+                <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                  <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
+                  <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.laba)}</td>
                 </tr>
               ))}
             </tbody>
@@ -819,27 +987,42 @@ function LaporanScreen({ data }) {
       </div>
 
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: c.text }}>Riwayat Transaksi</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>Riwayat Transaksi (per Kasir)</p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+              <Search size={12} color={c.textDim} />
+              <input value={searchRiwayat} onChange={(e) => setSearchRiwayat(e.target.value)} placeholder="Cari kasir/invoice/barang..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
+            </div>
+            <CopyButton getText={riwayatTextForCopy} />
+          </div>
+        </div>
         <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
-                <th className="text-left px-4 py-2 font-medium">Invoice</th>
                 <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                <th className="text-left px-4 py-2 font-medium">Kategori</th>
+                <th className="text-left px-4 py-2 font-medium">Barang</th>
+                <th className="text-left px-4 py-2 font-medium">Invoice</th>
                 <th className="text-right px-4 py-2 font-medium">Item</th>
                 <th className="text-right px-4 py-2 font-medium">Total</th>
+                <th className="text-left px-4 py-2 font-medium">Kasir</th>
               </tr>
             </thead>
             <tbody>
-              {trx.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Belum ada transaksi.</td></tr>
+              {riwayatRows.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
               )}
-              {trx.map((t) => (
-                <tr key={t.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{t.id}</td>
-                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{new Date(t.tanggal).toLocaleString("id-ID")}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{t.items.reduce((s, i) => s + i.qty, 0)}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(t.total)}</td>
+              {riwayatRows.map((r, idx) => (
+                <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                  <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
+                  <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
+                  <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.omzet)}</td>
+                  <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
                 </tr>
               ))}
             </tbody>
@@ -852,7 +1035,7 @@ function LaporanScreen({ data }) {
 
 export default function App() {
   const [tab, setTab] = useState("kasir");
-  const [role, setRole] = useState("admin");
+  const [currentUser, setCurrentUser] = useState(null);
   const { data, persist, status } = useStorage();
 
   if (status === "loading" || !data) {
@@ -865,6 +1048,10 @@ export default function App() {
     );
   }
 
+  if (!currentUser) {
+    return <LoginGate onLogin={setCurrentUser} />;
+  }
+
   return (
     <div className="w-full min-h-screen font-sans" style={{ backgroundColor: c.bg }}>
       <div className="px-5 pt-5 flex items-center justify-between">
@@ -872,12 +1059,26 @@ export default function App() {
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>Etalase — Aplikasi Kasir</p>
           <p className="text-xs mt-0.5" style={{ color: c.textDim }}>Data tersimpan otomatis di sesi kamu</p>
         </div>
-        <RoleSwitch role={role} setRole={setRole} />
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs px-3 py-1.5 rounded-lg capitalize"
+            style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+          >
+            {currentUser.id} · {currentUser.role}
+          </span>
+          <button
+            onClick={() => setCurrentUser(null)}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium"
+            style={{ backgroundColor: c.coralDim, color: c.coral }}
+          >
+            Keluar
+          </button>
+        </div>
       </div>
       <Nav tab={tab} setTab={setTab} />
-      {tab === "kasir" && <KasirScreen data={data} persist={persist} />}
+      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} />}
       {tab === "katalog" && <KatalogScreen data={data} />}
-      {tab === "gudang" && <GudangScreen data={data} persist={persist} role={role} />}
+      {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
       {tab === "laporan" && <LaporanScreen data={data} />}
     </div>
