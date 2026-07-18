@@ -4,7 +4,7 @@ import { Document, Packer, Table, TableRow, TableCell, Paragraph, TextRun, Image
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
-  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet
+  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp
 } from "lucide-react";
 
 const darkPalette = {
@@ -44,7 +44,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.9";
+const APP_VERSION = "0.10";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -472,6 +472,29 @@ function Nav({ tab, setTab }) {
   );
 }
 
+function ScrollToTopButton() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 200);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-5 right-5 p-3 rounded-full shadow-lg z-50"
+      style={{ backgroundColor: c.mint, color: "#0B1210", border: `1px solid ${c.border}` }}
+      aria-label="Ke atas"
+    >
+      <ArrowUp size={18} />
+    </button>
+  );
+}
+
 function StokBadge({ n }) {
   const color = n <= 0 ? c.coral : n <= 5 ? c.amber : c.textDim;
   return <span className="font-mono text-[11px]" style={{ color }}>Stok: {n}</span>;
@@ -533,6 +556,18 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
   const total = cart.reduce((s, i) => s + i.hargaJual * i.qty, 0);
   const paid = payments.reduce((s, p) => s + p.jumlah, 0);
   const sisa = total - paid;
+
+  useEffect(() => {
+    const handleF5 = (e) => {
+      if (e.key !== "F5") return;
+      e.preventDefault();
+      if (cart.length === 0 || sisa <= 0) return;
+      setSplitMode(true);
+      setPayments((prev) => [...prev, { metode: "cashless", jumlah: Math.max(sisa, 0) }]);
+    };
+    window.addEventListener("keydown", handleF5);
+    return () => window.removeEventListener("keydown", handleF5);
+  }, [cart.length, sisa]);
 
   const addPayment = (metode, jumlah) => {
     if (jumlah <= 0) return;
@@ -720,9 +755,9 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
                 </button>
               </div>
               <div className="flex gap-1.5">
-                {[{ key: "qris", icon: QrCode }, { key: "debit", icon: CreditCard }, { key: "cashless", icon: Wallet }].map(({ key, icon: Icon }) => (
+                {[{ key: "qris", icon: QrCode, label: "qris" }, { key: "debit", icon: CreditCard, label: "debit" }, { key: "cashless", icon: Wallet, label: "cashless (F5)" }].map(({ key, icon: Icon, label }) => (
                   <button key={key} onClick={() => addPayment(key, Math.max(sisa, 0))} disabled={sisa <= 0} className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
-                    <Icon size={14} />{key}
+                    <Icon size={14} />{label}
                   </button>
                 ))}
               </div>
@@ -1587,6 +1622,7 @@ export default function App() {
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
       {tab === "laporan" && <LaporanScreen data={data} />}
       {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />}
+      <ScrollToTopButton />
     </div>
   );
 }
