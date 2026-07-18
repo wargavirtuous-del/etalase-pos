@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import JsBarcode from "jsbarcode";
+import { Document, Packer, Table, TableRow, TableCell, Paragraph, TextRun, ImageRun, WidthType } from "docx";
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
@@ -42,7 +44,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.8";
+const APP_VERSION = "0.9";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -110,80 +112,40 @@ function nextSku(products) {
   const n = (nums.length ? Math.max(...nums) : 0) + 1;
   return "TK-" + String(n).padStart(4, "0");
 }
-function genBarcodeDigits(id) {
-  const base = "899100" + String(id).padStart(6, "0");
+function genBarcodeDigits() {
+  // Timestamp + random memastikan tidak pernah bentrok, walau tambah barang berkali-kali cepat.
+  const raw = (Date.now().toString() + Math.floor(10 + Math.random() * 90)).slice(-11);
+  const base12 = raw.padStart(12, "0");
   let sum = 0;
-  for (let i = 0; i < base.length; i++) {
-    sum += parseInt(base[i], 10) * (i % 2 === 0 ? 1 : 3);
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(base12[i], 10) * (i % 2 === 0 ? 1 : 3);
   }
   const check = (10 - (sum % 10)) % 10;
-  return base + check;
+  return base12 + check;
 }
 
-function buildBarcodeSvgString(value, width = 160, height = 46) {
-  let seed = 0;
-  for (let i = 0; i < value.length; i++) seed += value.charCodeAt(i) * (i + 1);
-  let x = 4;
-  const usable = width - 8;
-  const n = value.length * 3;
-  const unit = usable / n;
-  let bars = "";
-  for (let i = 0; i < n; i++) {
-    const v = (seed * (i + 7) * 13) % 5;
-    const w = unit * (0.5 + (v % 3) * 0.4);
-    if (i % 2 === 0) {
-      bars += `<rect x="${x}" y="4" width="${Math.max(1, w)}" height="${height - 16}" fill="#000" />`;
-    }
-    x += w;
+// Barcode CODE128 asli & bisa dipindai (dibangkitkan lewat library jsbarcode)
+function barcodeToPngDataUrl(value, width = 300, height = 90) {
+  const canvas = document.createElement("canvas");
+  try {
+    JsBarcode(canvas, value, { format: "CODE128", width: 2, height: height - 30, displayValue: true, fontSize: 14, margin: 6 });
+  } catch (e) {
+    console.error("Gagal membuat barcode", e);
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>${bars}<text x="${width / 2}" y="${height - 4}" font-size="9" font-family="monospace" fill="#111" text-anchor="middle">${value}</text></svg>`;
+  return canvas.toDataURL("image/png");
 }
 
-function svgToPngDataUrl(svgMarkup, width, height) {
-  return new Promise((resolve, reject) => {
-    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
-
-// --- Minimal Code128-ish visual barcode (bars purely illustrative, not scannable-grade) ---
-function BarcodeSVG({ value, width = 160, height = 46 }) {
-  const bars = [];
-  let seed = 0;
-  for (let i = 0; i < value.length; i++) seed += value.charCodeAt(i) * (i + 1);
-  let x = 4;
-  const usable = width - 8;
-  const n = value.length * 3;
-  const unit = usable / n;
-  for (let i = 0; i < n; i++) {
-    const v = (seed * (i + 7) * 13) % 5;
-    const w = unit * (0.5 + (v % 3) * 0.4);
-    if (i % 2 === 0) {
-      bars.push(<rect key={i} x={x} y={4} width={Math.max(1, w)} height={height - 16} fill={c.text} />);
+function BarcodeSVG({ value, width = 200, height = 90 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    try {
+      JsBarcode(ref.current, value, { format: "CODE128", width: 2, height: height - 30, displayValue: true, fontSize: 14, margin: 6 });
+    } catch (e) {
+      console.error("Gagal membuat barcode", e);
     }
-    x += w;
-  }
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      <rect x="0" y="0" width={width} height={height} fill="#fff" rx="4" />
-      {bars}
-      <text x={width / 2} y={height - 4} fontSize="9" fontFamily="monospace" fill="#111" textAnchor="middle">{value}</text>
-    </svg>
-  );
+  }, [value, width, height]);
+  return <svg ref={ref} style={{ background: "#fff" }} />;
 }
 
 function useStorage() {
@@ -908,12 +870,17 @@ function GudangScreen({ data, persist, role }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selected, setSelected] = useState([]);
   const [bulkPrint, setBulkPrint] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredProducts = data.products.filter((p) =>
+    (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase())
+  );
 
   const toggleSelect = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
   const toggleSelectAll = () => {
-    setSelected((prev) => (prev.length === data.products.length ? [] : data.products.map((p) => p.id)));
+    setSelected((prev) => (prev.length === filteredProducts.length ? [] : filteredProducts.map((p) => p.id)));
   };
   const selectedProducts = data.products.filter((p) => selected.includes(p.id));
 
@@ -934,19 +901,16 @@ function GudangScreen({ data, persist, role }) {
   const copySelectedWithBarcode = async () => {
     setCopyMsg("Menyiapkan gambar barcode...");
     try {
-      const rows = await Promise.all(
-        selectedProducts.map(async (p) => {
-          const svg = buildBarcodeSvgString(p.barcode, 160, 46);
-          const dataUrl = await svgToPngDataUrl(svg, 160, 46);
-          return `<tr>
+      const rows = selectedProducts.map((p) => {
+        const dataUrl = barcodeToPngDataUrl(p.barcode, 220, 80);
+        return `<tr>
             <td style="padding:10px;border:1px solid #ddd;text-align:center;">
               <div style="font-weight:bold;font-size:13px;margin-bottom:2px;">${p.nama}</div>
               <div style="font-size:12px;margin-bottom:6px;">Rp${formatRibuan(p.hargaJual)}</div>
-              <img src="${dataUrl}" width="160" height="46" />
+              <img src="${dataUrl}" width="220" height="80" />
             </td>
           </tr>`;
-        })
-      );
+      });
       const html = `<table style="border-collapse:collapse;font-family:sans-serif;">
         <tbody>${rows.join("")}</tbody>
       </table>`;
@@ -964,6 +928,55 @@ function GudangScreen({ data, persist, role }) {
       setCopyMsg("Gagal menyalin gambar. Pastikan pakai Chrome/Edge versi terbaru.");
     }
     setTimeout(() => setCopyMsg(""), 3500);
+  };
+
+  const downloadDocx = async () => {
+    setCopyMsg("Menyiapkan file Word...");
+    try {
+      const rows = selectedProducts.map((p) => {
+        const dataUrl = barcodeToPngDataUrl(p.barcode, 300, 100);
+        const base64 = dataUrl.split(",")[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              margins: { top: 150, bottom: 150, left: 150, right: 150 },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: p.nama, bold: true, size: 24 })] }),
+                new Paragraph({ children: [new TextRun({ text: `Rp${formatRibuan(p.hargaJual)}`, size: 22 })] }),
+                new Paragraph({
+                  children: [new ImageRun({ data: bytes, type: "png", transformation: { width: 220, height: 73 } })],
+                }),
+              ],
+            }),
+          ],
+        });
+      });
+      const doc = new Document({
+        sections: [
+          {
+            children: [
+              new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows }),
+            ],
+          },
+        ],
+      });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "label-barang.docx";
+      a.click();
+      URL.revokeObjectURL(url);
+      setCopyMsg("File Word berhasil di-download.");
+    } catch (e) {
+      console.error(e);
+      setCopyMsg("Gagal membuat file Word.");
+    }
+    setTimeout(() => setCopyMsg(""), 3000);
   };
 
   const downloadCSV = () => {
@@ -990,9 +1003,9 @@ function GudangScreen({ data, persist, role }) {
 
   const addProduct = async () => {
     if (!form.nama || !form.hargaJual) return;
-    const id = Math.max(0, ...data.products.map((p) => p.id)) + 1;
+    const id = Date.now();
     const sku = nextSku(data.products);
-    const barcode = form.barcode.trim() ? form.barcode.trim() : genBarcodeDigits(id);
+    const barcode = form.barcode.trim() ? form.barcode.trim() : genBarcodeDigits();
     const newProduct = {
       id, sku, barcode,
       nama: form.nama,
@@ -1043,6 +1056,16 @@ function GudangScreen({ data, persist, role }) {
   return (
     <div className="p-5 flex gap-5">
       <div className="flex-1 space-y-3">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+          <Search size={16} color={c.textDim} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama, SKU, barcode, atau kategori..."
+            className="bg-transparent outline-none text-sm w-full"
+            style={{ color: c.text }}
+          />
+        </div>
         {selected.length > 0 && (
           <div className="px-3 py-2 rounded-lg" style={{ backgroundColor: c.mintDim, border: `1px solid ${c.mint}` }}>
             <div className="flex items-center justify-between">
@@ -1050,6 +1073,7 @@ function GudangScreen({ data, persist, role }) {
               <div className="flex gap-2">
                 <button onClick={copySelected} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Kode</button>
                 <button onClick={copySelectedWithBarcode} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Copy Kode + Barcode</button>
+                <button onClick={downloadDocx} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Download Word</button>
                 <button onClick={downloadCSV} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Download CSV</button>
                 <button onClick={() => setBulkPrint(true)} className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
                   <Printer size={12} /> Cetak Label Terpilih
@@ -1065,7 +1089,7 @@ function GudangScreen({ data, persist, role }) {
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
                 <th className="px-3 py-2">
-                  <input type="checkbox" checked={selected.length === data.products.length && data.products.length > 0} onChange={toggleSelectAll} />
+                  <input type="checkbox" checked={selected.length === filteredProducts.length && filteredProducts.length > 0} onChange={toggleSelectAll} />
                 </th>
                 <th className="text-left px-4 py-2 font-medium">Barang</th>
                 <th className="text-right px-4 py-2 font-medium">Gudang</th>
@@ -1076,7 +1100,10 @@ function GudangScreen({ data, persist, role }) {
               </tr>
             </thead>
             <tbody>
-              {data.products.map((p) => (
+              {filteredProducts.length === 0 && (
+                <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
+              )}
+              {filteredProducts.map((p) => (
                 <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
                   <td className="px-3 py-2 text-center">
                     <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} />
