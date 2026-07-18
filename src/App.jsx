@@ -44,7 +44,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.10";
+const APP_VERSION = "0.11";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -93,13 +93,14 @@ function formatRibuan(value) {
   if (!digits) return "";
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
-function RupiahInput({ value, onChange, placeholder, className, style }) {
+function RupiahInput({ value, onChange, placeholder, className, style, onKeyDown }) {
   return (
     <div className="relative">
       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: c.textDim }}>Rp</span>
       <input
         value={formatRibuan(value)}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         className={className}
         style={{ ...style, paddingLeft: 22 }}
@@ -187,7 +188,7 @@ function useSettings() {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { theme: "dark", kasirDisplay: "visual" };
+    return { theme: "dark", kasirDisplay: "visual", printerBridgeUrl: "" };
   });
 
   const update = (patch) => {
@@ -349,6 +350,18 @@ function SettingsModal({ settings, update, onClose, currentUser, accounts, updat
           ))}
         </div>
 
+        <p className="text-xs mb-2" style={{ color: c.textDim }}>Alamat Print Bridge (untuk cetak struk otomatis)</p>
+        <input
+          value={settings.printerBridgeUrl}
+          onChange={(e) => update({ printerBridgeUrl: e.target.value })}
+          placeholder="https://192.168.1.15:4000"
+          className="w-full text-xs bg-transparent outline-none px-2 py-1.5 rounded-lg mb-1"
+          style={{ border: `1px solid ${c.border}`, color: c.text }}
+        />
+        <p className="text-[10px] mb-5" style={{ color: c.textDim }}>
+          Kosongkan kalau printer nyambung langsung ke komputer ini. Lihat tutorial print bridge untuk printer di komputer lain.
+        </p>
+
         <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 14 }}>
           <ChangePasswordSection currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />
           {currentUser.role === "admin" && (
@@ -441,11 +454,11 @@ function LoginGate({ onLogin, accounts }) {
 
 function Nav({ tab, setTab }) {
   const items = [
-    { key: "kasir", label: "Kasir", icon: ShoppingCart },
-    { key: "katalog", label: "Katalog", icon: Grid3x3 },
-    { key: "gudang", label: "Gudang & Transfer", icon: ArrowRightLeft },
-    { key: "opname", label: "Stok Opname", icon: ClipboardCheck },
-    { key: "laporan", label: "Laporan", icon: BarChart3 },
+    { key: "kasir", label: "Kasir", icon: ShoppingCart, desc: "Layar transaksi utama — cari/scan barang, hitung pembayaran, cetak struk." },
+    { key: "katalog", label: "Katalog", icon: Grid3x3, desc: "Daftar semua barang & harga, bisa tampilan bergambar atau teks saja." },
+    { key: "gudang", label: "Gudang & Transfer", icon: ArrowRightLeft, desc: "Kelola stok gudang, transfer ke etalase, tambah/edit/hapus barang, cetak label barcode." },
+    { key: "opname", label: "Stok Opname", icon: ClipboardCheck, desc: "Cocokkan stok yang tercatat di sistem dengan stok fisik hasil hitung manual." },
+    { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Ringkasan omzet, laba per kategori, dan riwayat transaksi per kasir." },
   ];
   return (
     <div className="flex flex-wrap gap-2 px-5 pt-5 pb-4 border-b" style={{ borderColor: c.border }}>
@@ -453,19 +466,26 @@ function Nav({ tab, setTab }) {
         const active = tab === it.key;
         const Icon = it.icon;
         return (
-          <button
-            key={it.key}
-            onClick={() => setTab(it.key)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: active ? c.mintDim : "transparent",
-              color: active ? c.mint : c.textDim,
-              border: `1px solid ${active ? c.mint : "transparent"}`,
-            }}
-          >
-            <Icon size={16} />
-            {it.label}
-          </button>
+          <div key={it.key} className="relative group">
+            <button
+              onClick={() => setTab(it.key)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: active ? c.mintDim : "transparent",
+                color: active ? c.mint : c.textDim,
+                border: `1px solid ${active ? c.mint : "transparent"}`,
+              }}
+            >
+              <Icon size={16} />
+              {it.label}
+            </button>
+            <div
+              className="absolute left-0 top-full mt-1 w-56 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+              style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+            >
+              {it.desc}
+            </div>
+          </div>
         );
       })}
     </div>
@@ -501,7 +521,7 @@ function StokBadge({ n }) {
 }
 
 // ---------------- KASIR ----------------
-function KasirScreen({ data, persist, currentUser, displayMode }) {
+function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl }) {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [splitMode, setSplitMode] = useState(false);
@@ -590,6 +610,27 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
     setCashInput("");
   };
 
+  const kirimKePrintBridge = async (trx) => {
+    if (!printerBridgeUrl) return;
+    try {
+      await fetch(printerBridgeUrl.replace(/\/$/, "") + "/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeName: STORE_NAME,
+          storePhone: STORE_PHONE,
+          invoice: trx.id,
+          items: trx.items.map((i) => ({ nama: i.nama, qty: i.qty, subtotal: i.harga * i.qty })),
+          total: trx.total,
+          payments: trx.payments,
+          kembalian: trx.kembalian,
+        }),
+      });
+    } catch (e) {
+      console.error("Gagal kirim ke print bridge:", e);
+    }
+  };
+
   const selesaikanTransaksi = async () => {
     const invoice = "INV-" + Date.now().toString().slice(-8);
     const newProducts = products.map((p) => {
@@ -621,6 +662,7 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
       movements: [...newMovements, ...data.movements],
     });
     setReceipt(trx);
+    kirimKePrintBridge(trx);
     setCart([]);
     setPayments([]);
     setSplitMode(false);
@@ -642,8 +684,8 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
     <div className="flex gap-5 p-5">
       <div className="flex-1">
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4"
-          style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4 sticky top-0 z-20"
+          style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}
         >
           <Search size={16} color={c.textDim} />
           <input
@@ -826,11 +868,18 @@ function KasirScreen({ data, persist, currentUser, displayMode }) {
               {receipt.kembalian > 0 && (
                 <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
               )}
+              {printerBridgeUrl && (
+                <p className="text-center mt-2" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
+              )}
             </div>
             <div className="flex gap-2 p-3" style={{ backgroundColor: "#eee" }}>
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
-              <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
-                <Printer size={12} /> Cetak
+              <button
+                onClick={() => (printerBridgeUrl ? kirimKePrintBridge(receipt) : window.print())}
+                className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1"
+                style={{ backgroundColor: c.mint, color: "#0B1210" }}
+              >
+                <Printer size={12} /> {printerBridgeUrl ? "Cetak Ulang" : "Cetak"}
               </button>
             </div>
           </div>
@@ -906,6 +955,21 @@ function GudangScreen({ data, persist, role }) {
   const [selected, setSelected] = useState([]);
   const [bulkPrint, setBulkPrint] = useState(false);
   const [search, setSearch] = useState("");
+  const addFormRef = useRef(null);
+
+  const handleEnterNext = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const container = addFormRef.current;
+    if (!container) return;
+    const focusables = Array.from(container.querySelectorAll("input:not([type=file])"));
+    const idx = focusables.indexOf(e.target);
+    if (idx > -1 && idx < focusables.length - 1) {
+      focusables[idx + 1].focus();
+    } else {
+      addProduct();
+    }
+  };
 
   const filteredProducts = data.products.filter((p) =>
     (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase())
@@ -1091,7 +1155,7 @@ function GudangScreen({ data, persist, role }) {
   return (
     <div className="p-5 flex gap-5">
       <div className="flex-1 space-y-3">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg sticky top-0 z-20" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}>
           <Search size={16} color={c.textDim} />
           <input
             value={search}
@@ -1185,7 +1249,7 @@ function GudangScreen({ data, persist, role }) {
       {isAdmin ? (
         <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
           <p className="text-sm font-semibold mb-3" style={{ color: c.text }}>Tambah Barang Baru</p>
-          <div className="space-y-2">
+          <div className="space-y-2" ref={addFormRef}>
             {[
               { key: "nama", ph: "Nama barang" },
               { key: "kategori", ph: "Kategori" },
@@ -1196,6 +1260,7 @@ function GudangScreen({ data, persist, role }) {
                 key={f.key}
                 value={form[f.key]}
                 onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onKeyDown={handleEnterNext}
                 placeholder={f.ph}
                 className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg"
                 style={{ border: `1px solid ${c.border}`, color: c.text }}
@@ -1204,6 +1269,7 @@ function GudangScreen({ data, persist, role }) {
             <RupiahInput
               value={form.hargaBeli}
               onChange={(v) => setForm((prev) => ({ ...prev, hargaBeli: v }))}
+              onKeyDown={handleEnterNext}
               placeholder="Harga beli"
               className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg"
               style={{ border: `1px solid ${c.border}`, color: c.text }}
@@ -1211,6 +1277,7 @@ function GudangScreen({ data, persist, role }) {
             <RupiahInput
               value={form.hargaJual}
               onChange={(v) => setForm((prev) => ({ ...prev, hargaJual: v }))}
+              onKeyDown={handleEnterNext}
               placeholder="Harga jual"
               className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg"
               style={{ border: `1px solid ${c.border}`, color: c.text }}
@@ -1226,7 +1293,7 @@ function GudangScreen({ data, persist, role }) {
               Simpan & Buat Barcode
             </button>
             <p className="text-[11px]" style={{ color: c.textDim }}>
-              Kalau barang sudah punya barcode dari pabrik, scan/ketik di kolom "Barcode pabrik". Kalau dikosongkan, sistem buat barcode sendiri otomatis.
+              Kalau barang sudah punya barcode dari pabrik, scan/ketik di kolom "Barcode pabrik". Kalau dikosongkan, sistem buat barcode sendiri otomatis. Tekan Enter untuk pindah ke kolom berikutnya.
             </p>
           </div>
         </div>
@@ -1616,7 +1683,7 @@ export default function App() {
         </div>
       </div>
       <Nav tab={tab} setTab={setTab} />
-      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} />}
+      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} printerBridgeUrl={settings.printerBridgeUrl} />}
       {tab === "katalog" && <KatalogScreen data={data} />}
       {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
