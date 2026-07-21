@@ -44,7 +44,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.11";
+const APP_VERSION = "0.12";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -306,6 +306,7 @@ function ManageAccountsSection({ accounts, updateAccounts }) {
 }
 
 function SettingsModal({ settings, update, onClose, currentUser, accounts, updateAccounts }) {
+  useModalKeys(true, null, onClose);
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
       <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
@@ -492,6 +493,23 @@ function Nav({ tab, setTab }) {
   );
 }
 
+function useModalKeys(isOpen, onConfirm, onCancel) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => {
+      if (e.key === "Enter" && onConfirm) {
+        e.preventDefault();
+        onConfirm();
+      } else if (e.key === "Escape" && onCancel) {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, onConfirm, onCancel]);
+}
+
 function ScrollToTopButton() {
   const [visible, setVisible] = useState(false);
 
@@ -512,6 +530,31 @@ function ScrollToTopButton() {
     >
       <ArrowUp size={18} />
     </button>
+  );
+}
+
+function QtyInput({ value, max, onCommit }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(String(value)), [value]);
+
+  const commit = () => {
+    const n = parseInt(text, 10);
+    const clamped = isNaN(n) || n < 1 ? value : Math.min(n, max);
+    setText(String(clamped));
+    if (clamped !== value) onCommit(clamped);
+  };
+
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+      }}
+      className="text-xs font-mono w-10 text-center bg-transparent outline-none rounded py-0.5"
+      style={{ border: `1px solid ${c.border}`, color: c.text }}
+    />
   );
 }
 
@@ -571,6 +614,10 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     setCart((prev) =>
       prev.map((i) => (i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i)).filter((i) => i.qty > 0)
     );
+  };
+
+  const setQtyExact = (id, qty) => {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, qty } : i)).filter((i) => i.qty > 0));
   };
 
   const total = cart.reduce((s, i) => s + i.hargaJual * i.qty, 0);
@@ -680,6 +727,9 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     setVoidConfirm(false);
   };
 
+  useModalKeys(voidConfirm, batalkanTransaksi, () => setVoidConfirm(false));
+  useModalKeys(!!receipt, null, () => setReceipt(null));
+
   return (
     <div className="flex gap-5 p-5">
       <div className="flex-1">
@@ -757,7 +807,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                 <p className="text-[11px] font-mono" style={{ color: c.textDim }}>{rupiah(i.hargaJual)}</p>
               </div>
               <button onClick={() => changeQty(i.id, -1)} className="p-1 rounded" style={{ backgroundColor: c.surfaceAlt }}><Minus size={12} color={c.text} /></button>
-              <span className="text-xs font-mono w-4 text-center" style={{ color: c.text }}>{i.qty}</span>
+              <QtyInput value={i.qty} max={i.etalase} onCommit={(n) => setQtyExact(i.id, n)} />
               <button onClick={() => changeQty(i.id, 1)} className="p-1 rounded" style={{ backgroundColor: c.surfaceAlt }}><Plus size={12} color={c.text} /></button>
               <button onClick={() => changeQty(i.id, -i.qty)} className="p-1 rounded ml-1"><Trash2 size={12} color={c.coral} /></button>
             </div>
@@ -892,20 +942,39 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 // ---------------- KATALOG ----------------
 function KatalogScreen({ data }) {
   const [mode, setMode] = useState("visual");
+  const [search, setSearch] = useState("");
+
+  const filtered = data.products.filter((p) =>
+    (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="p-5">
-      <div className="flex gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2" style={{ backgroundColor: c.bg }}>
         <button onClick={() => setMode("visual")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "visual" ? c.mintDim : c.surfaceAlt, color: mode === "visual" ? c.mint : c.textDim }}>
           <Grid3x3 size={13} /> Bergambar
         </button>
         <button onClick={() => setMode("text")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "text" ? c.mintDim : c.surfaceAlt, color: mode === "text" ? c.mint : c.textDim }}>
           <List size={13} /> Teks
         </button>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+          <Search size={14} color={c.textDim} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama, SKU, barcode, atau kategori..."
+            className="bg-transparent outline-none text-sm w-full"
+            style={{ color: c.text }}
+          />
+        </div>
       </div>
 
       {mode === "visual" ? (
         <div className="grid grid-cols-4 gap-3">
-          {data.products.map((p) => (
+          {filtered.length === 0 && (
+            <p className="col-span-4 text-center text-xs py-6" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</p>
+          )}
+          {filtered.map((p) => (
             <div key={p.id} className="rounded-xl p-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
               <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
                 {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={26} color={c.textDim} />}
@@ -928,7 +997,10 @@ function KatalogScreen({ data }) {
               </tr>
             </thead>
             <tbody>
-              {data.products.map((p) => (
+              {filtered.length === 0 && (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
+              )}
+              {filtered.map((p) => (
                 <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
                   <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{p.sku}</td>
                   <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
@@ -948,7 +1020,8 @@ function KatalogScreen({ data }) {
 function GudangScreen({ data, persist, role }) {
   const isAdmin = role === "admin";
   const [inputs, setInputs] = useState({});
-  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "", foto: "" });
+  const [refillInputs, setRefillInputs] = useState({});
+  const [form, setForm] = useState({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", etalaseAwal: "", barcode: "", foto: "" });
   const [showLabel, setShowLabel] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -1100,6 +1173,15 @@ function GudangScreen({ data, persist, role }) {
     setInputs((prev) => ({ ...prev, [p.id]: "" }));
   };
 
+  const doRefill = async (p) => {
+    const jumlah = parseInt(refillInputs[p.id] || "0", 10);
+    if (!jumlah || jumlah <= 0) return;
+    const newProducts = data.products.map((x) => (x.id === p.id ? { ...x, gudang: x.gudang + jumlah } : x));
+    const mv = { id: Date.now() + "-r", productId: p.id, nama: p.nama, tipe: "masuk", jumlah, referensi: "Refill gudang", waktu: new Date().toISOString() };
+    await persist({ ...data, products: newProducts, movements: [mv, ...data.movements] });
+    setRefillInputs((prev) => ({ ...prev, [p.id]: "" }));
+  };
+
   const addProduct = async () => {
     if (!form.nama || !form.hargaJual) return;
     const id = Date.now();
@@ -1112,12 +1194,12 @@ function GudangScreen({ data, persist, role }) {
       satuan: "pcs",
       hargaBeli: parseInt(form.hargaBeli || "0", 10),
       hargaJual: parseInt(form.hargaJual || "0", 10),
-      etalase: 0,
+      etalase: parseInt(form.etalaseAwal || "0", 10),
       gudang: parseInt(form.gudang || "0", 10),
       foto: form.foto || "",
     };
     await persist({ ...data, products: [...data.products, newProduct] });
-    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", barcode: "", foto: "" });
+    setForm({ nama: "", kategori: "", hargaBeli: "", hargaJual: "", gudang: "", etalaseAwal: "", barcode: "", foto: "" });
     setShowLabel(newProduct);
   };
 
@@ -1151,6 +1233,11 @@ function GudangScreen({ data, persist, role }) {
     await persist({ ...data, products: newProducts, movements: [mv, ...data.movements] });
     setDeleteConfirm(null);
   };
+
+  useModalKeys(!!editing, simpanEdit, () => setEditing(null));
+  useModalKeys(!!deleteConfirm, () => hapusBarang(deleteConfirm), () => setDeleteConfirm(null));
+  useModalKeys(!!showLabel, () => window.print(), () => setShowLabel(null));
+  useModalKeys(bulkPrint, () => window.print(), () => setBulkPrint(false));
 
   return (
     <div className="p-5 flex gap-5">
@@ -1193,14 +1280,15 @@ function GudangScreen({ data, persist, role }) {
                 <th className="text-left px-4 py-2 font-medium">Barang</th>
                 <th className="text-right px-4 py-2 font-medium">Gudang</th>
                 <th className="text-right px-4 py-2 font-medium">Etalase</th>
-                <th className="text-right px-4 py-2 font-medium">Transfer</th>
+                <th className="text-right px-4 py-2 font-medium">Isi Gudang</th>
+                <th className="text-right px-4 py-2 font-medium">Transfer ke Etalase</th>
                 <th className="px-4 py-2"></th>
                 {isAdmin && <th className="px-4 py-2"></th>}
               </tr>
             </thead>
             <tbody>
               {filteredProducts.length === 0 && (
-                <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
+                <tr><td colSpan={isAdmin ? 8 : 7} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
               )}
               {filteredProducts.map((p) => (
                 <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
@@ -1211,10 +1299,16 @@ function GudangScreen({ data, persist, role }) {
                   <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.gudang}</td>
                   <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.etalase}</td>
                   <td className="px-4 py-2 text-right">
-                    <input value={inputs[p.id] || ""} onChange={(e) => setInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-16 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                    <div className="flex items-center justify-end gap-1">
+                      <input value={refillInputs[p.id] || ""} onChange={(e) => setRefillInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                      <button onClick={() => doRefill(p)} className="text-xs px-2 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.amberDim, color: c.amber }}>Isi</button>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button onClick={() => doTransfer(p)} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.mintDim, color: c.mint }}>Transfer</button>
+                    <div className="flex items-center justify-end gap-1">
+                      <input value={inputs[p.id] || ""} onChange={(e) => setInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                      <button onClick={() => doTransfer(p)} className="text-xs px-2 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.mintDim, color: c.mint }}>Transfer</button>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-right">
                     <button onClick={() => setShowLabel(p)} className="text-xs px-2 py-1.5 rounded-lg flex items-center gap-1" style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -1254,6 +1348,7 @@ function GudangScreen({ data, persist, role }) {
               { key: "nama", ph: "Nama barang" },
               { key: "kategori", ph: "Kategori" },
               { key: "gudang", ph: "Stok awal gudang" },
+              { key: "etalaseAwal", ph: "Stok awal etalase (langsung dipajang)" },
               { key: "barcode", ph: "Barcode pabrik (opsional, scan di sini)" },
             ].map((f) => (
               <input
@@ -1382,19 +1477,29 @@ function GudangScreen({ data, persist, role }) {
 function OpnameScreen({ data, persist }) {
   const [fisik, setFisik] = useState({});
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const rows = data.products.map((p) => {
-    const nilai = fisik[p.id];
-    const ada = nilai !== undefined && nilai !== "";
-    const jumlahFisik = ada ? parseInt(nilai, 10) : null;
-    const selisih = ada ? jumlahFisik - p.etalase : null;
-    return { ...p, jumlahFisik, selisih, ada };
-  });
+  const rows = data.products
+    .filter((p) => (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase()))
+    .map((p) => {
+      const nilai = fisik[p.id];
+      const ada = nilai !== undefined && nilai !== "";
+      const jumlahFisik = ada ? parseInt(nilai, 10) : null;
+      const selisih = ada ? jumlahFisik - p.etalase : null;
+      return { ...p, jumlahFisik, selisih, ada };
+    });
 
   const simpanOpname = async () => {
-    const adaPerubahan = rows.filter((r) => r.ada && r.selisih !== 0);
+    const allRows = data.products.map((p) => {
+      const nilai = fisik[p.id];
+      const ada = nilai !== undefined && nilai !== "";
+      const jumlahFisik = ada ? parseInt(nilai, 10) : null;
+      const selisih = ada ? jumlahFisik - p.etalase : null;
+      return { ...p, jumlahFisik, selisih, ada };
+    });
+    const adaPerubahan = allRows.filter((r) => r.ada && r.selisih !== 0);
     const newProducts = data.products.map((p) => {
-      const r = rows.find((x) => x.id === p.id);
+      const r = allRows.find((x) => x.id === p.id);
       return r && r.ada ? { ...p, etalase: r.jumlahFisik } : p;
     });
     const newMovements = adaPerubahan.map((r) => ({
@@ -1413,6 +1518,24 @@ function OpnameScreen({ data, persist }) {
 
   return (
     <div className="p-5">
+      <div className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2" style={{ backgroundColor: c.bg }}>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+          <Search size={14} color={c.textDim} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama, SKU, barcode, atau kategori..."
+            className="bg-transparent outline-none text-sm w-full"
+            style={{ color: c.text }}
+          />
+        </div>
+        <button onClick={simpanOpname} className="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+          Simpan Hasil Opname
+        </button>
+      </div>
+
+      {saved && <p className="mb-3 text-xs" style={{ color: c.mint }}>Tersimpan. Selisih otomatis dicatat ke log audit stok.</p>}
+
       <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
         <table className="w-full text-sm">
           <thead>
@@ -1424,6 +1547,9 @@ function OpnameScreen({ data, persist }) {
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
+            )}
             {rows.map((p) => (
               <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
                 <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
@@ -1446,10 +1572,6 @@ function OpnameScreen({ data, persist }) {
           </tbody>
         </table>
       </div>
-      <button onClick={simpanOpname} className="mt-4 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
-        Simpan Hasil Opname
-      </button>
-      {saved && <p className="mt-2 text-xs" style={{ color: c.mint }}>Tersimpan. Selisih otomatis dicatat ke log audit stok.</p>}
     </div>
   );
 }
