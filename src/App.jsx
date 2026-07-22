@@ -44,7 +44,7 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.12";
+const APP_VERSION = "0.13";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -899,7 +899,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       {receipt && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
-            <div className="p-4 font-mono text-[11px]" style={{ color: "#111" }}>
+            <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
               <p className="text-center font-semibold">{STORE_NAME}</p>
               <p className="text-center" style={{ color: "#555" }}>{receipt.id}</p>
               <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
@@ -918,11 +918,12 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               {receipt.kembalian > 0 && (
                 <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
               )}
-              {printerBridgeUrl && (
-                <p className="text-center mt-2" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
-              )}
+              <p className="text-center mt-3">Terima kasih!</p>
             </div>
-            <div className="flex gap-2 p-3" style={{ backgroundColor: "#eee" }}>
+            {printerBridgeUrl && (
+              <p className="text-center text-xs px-4" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
+            )}
+            <div className="flex gap-2 p-3 no-print" style={{ backgroundColor: "#eee" }}>
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
               <button
                 onClick={() => (printerBridgeUrl ? kirimKePrintBridge(receipt) : window.print())}
@@ -1212,6 +1213,9 @@ function GudangScreen({ data, persist, role }) {
   };
 
   const simpanEdit = async () => {
+    const oldProduct = data.products.find((p) => p.id === editing.id);
+    const newGudang = parseInt(editing.gudang || "0", 10);
+    const newEtalase = parseInt(editing.etalase || "0", 10);
     const newProducts = data.products.map((p) => {
       if (p.id !== editing.id) return p;
       return {
@@ -1221,9 +1225,18 @@ function GudangScreen({ data, persist, role }) {
         satuan: editing.satuan,
         hargaBeli: isAdmin ? parseInt(editing.hargaBeli || "0", 10) : p.hargaBeli,
         hargaJual: isAdmin ? parseInt(editing.hargaJual || "0", 10) : p.hargaJual,
+        gudang: newGudang,
+        etalase: newEtalase,
       };
     });
-    await persist({ ...data, products: newProducts });
+    const newMovements = [];
+    if (oldProduct && newGudang !== oldProduct.gudang) {
+      newMovements.push({ id: Date.now() + "-eg", productId: editing.id, nama: editing.nama, tipe: "edit_stok_gudang", jumlah: newGudang - oldProduct.gudang, referensi: "Edit manual", waktu: new Date().toISOString() });
+    }
+    if (oldProduct && newEtalase !== oldProduct.etalase) {
+      newMovements.push({ id: Date.now() + "-ee", productId: editing.id, nama: editing.nama, tipe: "edit_stok_etalase", jumlah: newEtalase - oldProduct.etalase, referensi: "Edit manual", waktu: new Date().toISOString() });
+    }
+    await persist({ ...data, products: newProducts, movements: [...newMovements, ...data.movements] });
     setEditing(null);
   };
 
@@ -1318,7 +1331,7 @@ function GudangScreen({ data, persist, role }) {
                   {isAdmin && (
                     <td className="px-4 py-2 text-right whitespace-nowrap">
                       <button
-                        onClick={() => setEditing({ ...p, hargaBeli: String(p.hargaBeli), hargaJual: String(p.hargaJual) })}
+                        onClick={() => setEditing({ ...p, hargaBeli: String(p.hargaBeli), hargaJual: String(p.hargaJual), gudang: String(p.gudang), etalase: String(p.etalase) })}
                         className="text-xs px-2 py-1.5 rounded-lg mr-1"
                         style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}
                       >
@@ -1410,6 +1423,17 @@ function GudangScreen({ data, persist, role }) {
               <input value={editing.kategori} onChange={(e) => setEditing((prev) => ({ ...prev, kategori: e.target.value }))} placeholder="Kategori" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <RupiahInput value={editing.hargaBeli} onChange={(v) => setEditing((prev) => ({ ...prev, hargaBeli: v }))} placeholder="Harga beli" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <RupiahInput value={editing.hargaJual} onChange={(v) => setEditing((prev) => ({ ...prev, hargaJual: v }))} placeholder="Harga jual" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+              <div className="flex gap-2 pt-1" style={{ borderTop: `1px dashed ${c.border}` }}>
+                <div className="flex-1">
+                  <p className="text-[10px] mb-1" style={{ color: c.textDim }}>Stok Gudang</p>
+                  <input value={editing.gudang} onChange={(e) => setEditing((prev) => ({ ...prev, gudang: e.target.value.replace(/\D/g, "") }))} className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] mb-1" style={{ color: c.textDim }}>Stok Etalase</p>
+                  <input value={editing.etalase} onChange={(e) => setEditing((prev) => ({ ...prev, etalase: e.target.value.replace(/\D/g, "") }))} className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                </div>
+              </div>
+              <p className="text-[10px]" style={{ color: c.textDim }}>Mengubah angka ini langsung menimpa jumlah stok (bukan transfer) — perubahan tercatat di log audit.</p>
             </div>
             <div className="flex gap-2 mt-3">
               <button onClick={() => setEditing(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Batal</button>
@@ -1435,10 +1459,12 @@ function GudangScreen({ data, persist, role }) {
       {showLabel && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="rounded-xl p-4" style={{ backgroundColor: "#fff", width: 220 }}>
-            <p className="text-xs font-semibold text-center mb-1" style={{ color: "#111" }}>{showLabel.nama}</p>
-            <p className="text-xs text-center mb-2" style={{ color: "#333" }}>{rupiah(showLabel.hargaJual)}</p>
-            <BarcodeSVG value={showLabel.barcode} width={190} />
-            <div className="flex gap-2 mt-3">
+            <div className="print-receipt">
+              <p className="text-xs font-semibold text-center mb-1" style={{ color: "#111" }}>{showLabel.nama}</p>
+              <p className="text-xs text-center mb-2" style={{ color: "#333" }}>{rupiah(showLabel.hargaJual)}</p>
+              <BarcodeSVG value={showLabel.barcode} width={190} />
+            </div>
+            <div className="flex gap-2 mt-3 no-print">
               <button onClick={() => setShowLabel(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#eee", color: "#111" }}>Tutup</button>
               <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
                 <Printer size={12} /> Cetak Label
@@ -1451,7 +1477,7 @@ function GudangScreen({ data, persist, role }) {
       {bulkPrint && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: "#fff", width: 260 }}>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 print-receipt">
               {selectedProducts.map((p) => (
                 <div key={p.id} className="pb-3" style={{ borderBottom: "1px dashed #ccc" }}>
                   <p className="text-xs font-semibold text-center mb-1" style={{ color: "#111" }}>{p.nama}</p>
@@ -1460,7 +1486,7 @@ function GudangScreen({ data, persist, role }) {
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 no-print">
               <button onClick={() => setBulkPrint(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#eee", color: "#111" }}>Tutup</button>
               <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
                 <Printer size={12} /> Cetak Semua
