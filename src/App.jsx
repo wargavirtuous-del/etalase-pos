@@ -44,7 +44,8 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const APP_VERSION = "0.13";
+const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi, Kode Pos 63472";
+const APP_VERSION = "0.14";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -657,8 +658,11 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     setCashInput("");
   };
 
+  const [printing, setPrinting] = useState(false);
+
   const kirimKePrintBridge = async (trx) => {
-    if (!printerBridgeUrl) return;
+    if (!printerBridgeUrl || printing) return;
+    setPrinting(true);
     try {
       await fetch(printerBridgeUrl.replace(/\/$/, "") + "/print", {
         method: "POST",
@@ -666,7 +670,9 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
         body: JSON.stringify({
           storeName: STORE_NAME,
           storePhone: STORE_PHONE,
+          storeAddress: STORE_ADDRESS,
           invoice: trx.id,
+          tanggal: trx.tanggal,
           items: trx.items.map((i) => ({ nama: i.nama, qty: i.qty, subtotal: i.harga * i.qty })),
           total: trx.total,
           payments: trx.payments,
@@ -675,6 +681,8 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       });
     } catch (e) {
       console.error("Gagal kirim ke print bridge:", e);
+    } finally {
+      setTimeout(() => setPrinting(false), 3000); // cegah klik dobel dalam 3 detik
     }
   };
 
@@ -902,7 +910,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
             <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
               <p className="text-center font-semibold">{STORE_NAME}</p>
               <p className="text-center" style={{ color: "#555" }}>{receipt.id}</p>
-              <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
+              <p className="text-center" style={{ color: "#555" }}>{new Date(receipt.tanggal).toLocaleString("id-ID")}</p>
               <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
               {receipt.items.map((it) => (
                 <div key={it.id} className="flex justify-between">
@@ -918,7 +926,9 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               {receipt.kembalian > 0 && (
                 <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
               )}
-              <p className="text-center mt-3">Terima kasih!</p>
+              <p className="text-center mt-3">Syukron :)</p>
+              <p className="text-center" style={{ color: "#555" }}>{STORE_ADDRESS}</p>
+              <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
             </div>
             {printerBridgeUrl && (
               <p className="text-center text-xs px-4" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
@@ -927,10 +937,11 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
               <button
                 onClick={() => (printerBridgeUrl ? kirimKePrintBridge(receipt) : window.print())}
+                disabled={printerBridgeUrl && printing}
                 className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1"
-                style={{ backgroundColor: c.mint, color: "#0B1210" }}
+                style={{ backgroundColor: printerBridgeUrl && printing ? "#ccc" : c.mint, color: "#0B1210" }}
               >
-                <Printer size={12} /> {printerBridgeUrl ? "Cetak Ulang" : "Cetak"}
+                <Printer size={12} /> {printerBridgeUrl ? (printing ? "Mencetak..." : "Cetak Ulang") : "Cetak"}
               </button>
             </div>
           </div>
