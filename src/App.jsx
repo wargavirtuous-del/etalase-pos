@@ -44,8 +44,8 @@ const STORAGE_KEY = "pos-data-v1";
 const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
-const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi, Kode Pos 63472";
-const APP_VERSION = "0.14";
+const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
+const APP_VERSION = "0.16";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -908,7 +908,10 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
             <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
-              <p className="text-center font-semibold">{STORE_NAME}</p>
+              <p className="text-center font-semibold" style={{ textTransform: "uppercase" }}>{STORE_NAME}</p>
+              <div className="my-1" style={{ borderTop: "1px dashed #999" }} />
+              <p className="text-center" style={{ color: "#555" }}>{STORE_ADDRESS}</p>
+              <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
               <p className="text-center" style={{ color: "#555" }}>{receipt.id}</p>
               <p className="text-center" style={{ color: "#555" }}>{new Date(receipt.tanggal).toLocaleString("id-ID")}</p>
               <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
@@ -918,7 +921,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                   <span>{rupiah(it.harga * it.qty)}</span>
                 </div>
               ))}
-              <div className="my-2" style={{ borderTop: "1px dashed #999" }} />
+              <div className="my-2" style={{ borderTop: "2px solid #111" }} />
               <div className="flex justify-between font-semibold"><span>Total</span><span>{rupiah(receipt.total)}</span></div>
               {receipt.payments.map((p, idx) => (
                 <div key={idx} className="flex justify-between capitalize" style={{ color: "#555" }}><span>{p.metode}</span><span>{rupiah(p.jumlah)}</span></div>
@@ -926,9 +929,8 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               {receipt.kembalian > 0 && (
                 <div className="flex justify-between font-semibold" style={{ color: "#111" }}><span>Kembalian</span><span>{rupiah(receipt.kembalian)}</span></div>
               )}
-              <p className="text-center mt-3">Syukron :)</p>
-              <p className="text-center" style={{ color: "#555" }}>{STORE_ADDRESS}</p>
-              <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
+              <p className="text-center mt-3">Syukron Atas Kunjungannya :)</p>
+              <p className="text-center">Anda Belanja Anda Beramal</p>
             </div>
             {printerBridgeUrl && (
               <p className="text-center text-xs px-4" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
