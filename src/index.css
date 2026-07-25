@@ -24,7 +24,13 @@ html, body, #root {
     top: 0;
     left: 0;
     width: 80mm;
-    padding: 4mm;
+    padding: 4mm 4mm;
+    padding-top: 1cm;
+    padding-bottom: 1cm;
+  }
+  .print-receipt .receipt-title {
+    font-size: 15px !important;
+    letter-spacing: 0.5px;
   }
   .no-print {
     display: none !important;
