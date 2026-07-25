@@ -45,7 +45,7 @@ const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
 const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
-const APP_VERSION = "0.16";
+const APP_VERSION = "0.17";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -601,15 +601,31 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     });
   };
 
-  const handleScanEnter = (e) => {
-    if (e.key !== "Enter") return;
-    const code = query.trim();
-    const match = products.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase());
-    if (match) {
-      addToCart(match);
-      setQuery("");
-    }
-  };
+  // Penangkap scan global: cadangan kalau fokus kursor kebetulan gak lagi di kolom cari.
+  // Scanner mengetik sangat cepat (semua karakter dalam <100ms), beda dari ketikan manusia.
+  useEffect(() => {
+    let buffer = "";
+    let lastTime = 0;
+    const handler = (e) => {
+      const now = Date.now();
+      if (now - lastTime > 120) buffer = "";
+      lastTime = now;
+      if (e.key === "Enter") {
+        const code = buffer.trim();
+        buffer = "";
+        if (code.length < 3) return; // terlalu pendek, kemungkinan bukan hasil scan
+        const match = products.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase());
+        if (match) {
+          addToCart(match);
+          setQuery("");
+        }
+        return;
+      }
+      if (e.key.length === 1) buffer += e.key;
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [products]);
 
   const changeQty = (id, delta) => {
     setCart((prev) =>
@@ -750,7 +766,6 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleScanEnter}
             placeholder="Cari nama, scan barcode, atau ketik SKU lalu Enter..."
             className="bg-transparent outline-none text-sm w-full"
             style={{ color: c.text }}
@@ -908,7 +923,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
             <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
-              <p className="text-center font-semibold" style={{ textTransform: "uppercase" }}>{STORE_NAME}</p>
+              <p className="text-center font-semibold receipt-title" style={{ textTransform: "uppercase" }}>{STORE_NAME}</p>
               <div className="my-1" style={{ borderTop: "1px dashed #999" }} />
               <p className="text-center" style={{ color: "#555" }}>{STORE_ADDRESS}</p>
               <p className="text-center" style={{ color: "#555" }}>Telp: {STORE_PHONE}</p>
@@ -1238,6 +1253,7 @@ function GudangScreen({ data, persist, role }) {
         satuan: editing.satuan,
         hargaBeli: isAdmin ? parseInt(editing.hargaBeli || "0", 10) : p.hargaBeli,
         hargaJual: isAdmin ? parseInt(editing.hargaJual || "0", 10) : p.hargaJual,
+        barcode: editing.barcode?.trim() ? editing.barcode.trim() : p.barcode,
         gudang: newGudang,
         etalase: newEtalase,
       };
@@ -1434,6 +1450,10 @@ function GudangScreen({ data, persist, role }) {
             <div className="space-y-2">
               <input value={editing.nama} onChange={(e) => setEditing((prev) => ({ ...prev, nama: e.target.value }))} placeholder="Nama barang" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <input value={editing.kategori} onChange={(e) => setEditing((prev) => ({ ...prev, kategori: e.target.value }))} placeholder="Kategori" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+              <div>
+                <p className="text-[10px] mb-1" style={{ color: c.textDim }}>Barcode / Kode Label</p>
+                <input value={editing.barcode || ""} onChange={(e) => setEditing((prev) => ({ ...prev, barcode: e.target.value }))} placeholder="Barcode" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg font-mono" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+              </div>
               <RupiahInput value={editing.hargaBeli} onChange={(v) => setEditing((prev) => ({ ...prev, hargaBeli: v }))} placeholder="Harga beli" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <RupiahInput value={editing.hargaJual} onChange={(v) => setEditing((prev) => ({ ...prev, hargaJual: v }))} placeholder="Harga jual" className="w-full text-sm bg-transparent outline-none py-1.5 pr-2 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
               <div className="flex gap-2 pt-1" style={{ borderTop: `1px dashed ${c.border}` }}>
@@ -1633,6 +1653,128 @@ function CopyButton({ getText }) {
   );
 }
 
+function getWeekRangeSatToFri(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Minggu ... 6=Sabtu
+  const diffToSaturday = (day + 1) % 7;
+  const start = new Date(d);
+  start.setDate(d.getDate() - diffToSaturday);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function getHijriParts(date) {
+  const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", { year: "numeric", month: "numeric" });
+  const parts = fmt.formatToParts(new Date(date));
+  return {
+    year: parts.find((p) => p.type === "year").value,
+    month: parts.find((p) => p.type === "month").value,
+  };
+}
+
+function getPeriodInfo(periodType, refDate = new Date()) {
+  if (periodType === "mingguan") {
+    const { start, end } = getWeekRangeSatToFri(refDate);
+    return {
+      inRange: (d) => { const t = new Date(d).getTime(); return t >= start.getTime() && t <= end.getTime(); },
+      label: `${start.toLocaleDateString("id-ID")} – ${end.toLocaleDateString("id-ID")} (Sabtu–Jumat)`,
+    };
+  }
+  if (periodType === "bulanan_masehi") {
+    const y = refDate.getFullYear(), m = refDate.getMonth();
+    return {
+      inRange: (d) => { const dd = new Date(d); return dd.getFullYear() === y && dd.getMonth() === m; },
+      label: refDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+    };
+  }
+  // bulanan_hijriah
+  const ref = getHijriParts(refDate);
+  return {
+    inRange: (d) => { const p = getHijriParts(d); return p.year === ref.year && p.month === ref.month; },
+    label: new Intl.DateTimeFormat("id-u-ca-islamic", { year: "numeric", month: "long" }).format(refDate) + " H",
+  };
+}
+
+function ProductAnalysis({ data }) {
+  const [periodType, setPeriodType] = useState("mingguan");
+  const { inRange, label } = getPeriodInfo(periodType);
+
+  const stats = {};
+  data.transactions.forEach((t) => {
+    if (!inRange(t.tanggal)) return;
+    t.items.forEach((it) => {
+      if (!stats[it.id]) stats[it.id] = { id: it.id, nama: it.nama, qty: 0, trxSet: new Set() };
+      stats[it.id].qty += it.qty;
+      stats[it.id].trxSet.add(t.id);
+    });
+  });
+  const list = Object.values(stats).map((s) => ({ ...s, freq: s.trxSet.size }));
+
+  const top = (arr, key, dir, n = 5) =>
+    [...arr].sort((a, b) => (dir === "desc" ? b[key] - a[key] : a[key] - b[key])).slice(0, n);
+
+  const cepat = top(list, "freq", "desc");
+  const lambat = top(list, "freq", "asc");
+  const banyak = top(list, "qty", "desc");
+  const sedikit = top(list, "qty", "asc");
+
+  const MiniTable = ({ title, rows, valueKey, valueLabel }) => (
+    <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+      <div className="px-3 py-2" style={{ backgroundColor: c.surfaceAlt }}>
+        <p className="text-xs font-semibold" style={{ color: c.text }}>{title}</p>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-center py-4" style={{ color: c.textDim }}>Tidak ada data periode ini.</p>
+      ) : (
+        <table className="w-full text-xs">
+          <tbody>
+            {rows.map((r, idx) => (
+              <tr key={r.id} style={{ borderTop: idx > 0 ? `1px solid ${c.border}` : "none", backgroundColor: c.surface }}>
+                <td className="px-3 py-1.5" style={{ color: c.text }}>{idx + 1}. {r.nama}</td>
+                <td className="px-3 py-1.5 text-right font-mono" style={{ color: c.mint }}>{r[valueKey]} {valueLabel}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <p className="text-sm font-semibold" style={{ color: c.text }}>Analisis Produk</p>
+        <div className="flex gap-1.5">
+          {[
+            { key: "mingguan", label: "Mingguan (Sab–Jum)" },
+            { key: "bulanan_masehi", label: "Bulanan Masehi" },
+            { key: "bulanan_hijriah", label: "Bulanan Hijriah" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setPeriodType(t.key)}
+              className="text-xs px-3 py-1.5 rounded-lg font-medium"
+              style={{ backgroundColor: periodType === t.key ? c.mint : c.surfaceAlt, color: periodType === t.key ? "#0B1210" : c.textDim }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="text-xs mb-3" style={{ color: c.textDim }}>Periode berjalan: {label}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <MiniTable title="Tercepat Terjual (paling sering muncul di transaksi)" rows={cepat} valueKey="freq" valueLabel="transaksi" />
+        <MiniTable title="Terlambat Terjual (paling jarang muncul di transaksi)" rows={lambat} valueKey="freq" valueLabel="transaksi" />
+        <MiniTable title="Paling Banyak Terbeli (total unit)" rows={banyak} valueKey="qty" valueLabel="unit" />
+        <MiniTable title="Paling Sedikit Terbeli (total unit)" rows={sedikit} valueKey="qty" valueLabel="unit" />
+      </div>
+    </div>
+  );
+}
+
 function LaporanScreen({ data }) {
   const trx = data.transactions;
   const omzet = trx.reduce((s, t) => s + t.total, 0);
@@ -1661,6 +1803,24 @@ function LaporanScreen({ data }) {
 
   const [searchLaba, setSearchLaba] = useState("");
   const [searchRiwayat, setSearchRiwayat] = useState("");
+  const [searchTrx, setSearchTrx] = useState("");
+
+  const perTrxRows = trx
+    .map((t) => ({
+      invoice: t.id,
+      waktu: t.tanggal,
+      kasir: t.kasir || "-",
+      jumlahItem: t.items.reduce((s, i) => s + i.qty, 0),
+      jenisBarang: t.items.length,
+      total: t.total,
+    }))
+    .filter((r) => (r.invoice + r.kasir).toLowerCase().includes(searchTrx.toLowerCase()));
+
+  const trxTextForCopy = () => {
+    const header = ["Invoice", "Waktu", "Kasir", "Jumlah Item", "Jenis Barang", "Total"].join("\t");
+    const rows = perTrxRows.map((r) => [r.invoice, fmtWaktu(r.waktu), r.kasir, r.jumlahItem, r.jenisBarang, r.total].join("\t"));
+    return [header, ...rows].join("\n");
+  };
 
   const labaRows = flatRows.filter((r) =>
     (r.kategori + r.nama).toLowerCase().includes(searchLaba.toLowerCase())
@@ -1697,6 +1857,50 @@ function LaporanScreen({ data }) {
           </div>
         ))}
       </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>Laporan per Transaksi</p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+              <Search size={12} color={c.textDim} />
+              <input value={searchTrx} onChange={(e) => setSearchTrx(e.target.value)} placeholder="Cari invoice/kasir..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
+            </div>
+            <CopyButton getText={trxTextForCopy} />
+          </div>
+        </div>
+        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                <th className="text-left px-4 py-2 font-medium">Invoice</th>
+                <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                <th className="text-left px-4 py-2 font-medium">Kasir</th>
+                <th className="text-right px-4 py-2 font-medium">Jumlah Item</th>
+                <th className="text-right px-4 py-2 font-medium">Jenis Barang</th>
+                <th className="text-right px-4 py-2 font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perTrxRows.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Belum ada transaksi.</td></tr>
+              )}
+              {perTrxRows.map((r) => (
+                <tr key={r.invoice} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                  <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
+                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                  <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ProductAnalysis data={data} />
 
       <div>
         <div className="flex items-center justify-between mb-2">
