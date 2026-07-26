@@ -4,7 +4,7 @@ import { Document, Packer, Table, TableRow, TableCell, Paragraph, TextRun, Image
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
-  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp
+  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp, FileText, TrendingUp
 } from "lucide-react";
 
 const darkPalette = {
@@ -35,9 +35,24 @@ const lightPalette = {
   coral: "#C43F3A",
   coralDim: "rgba(196,63,58,0.10)",
 };
+const glassPalette = {
+  bg: "transparent",
+  surface: "rgba(255,255,255,0.14)",
+  surfaceAlt: "rgba(255,255,255,0.09)",
+  border: "rgba(255,255,255,0.28)",
+  text: "#FFFFFF",
+  textDim: "rgba(255,255,255,0.72)",
+  mint: "#5EEAD4",
+  mintDim: "rgba(94,234,212,0.22)",
+  amber: "#FDE68A",
+  amberDim: "rgba(253,230,138,0.22)",
+  coral: "#FCA5A5",
+  coralDim: "rgba(252,165,165,0.22)",
+};
 let c = { ...darkPalette };
 function applyTheme(mode) {
-  Object.assign(c, mode === "light" ? lightPalette : darkPalette);
+  const palette = mode === "light" ? lightPalette : mode === "glass" ? glassPalette : darkPalette;
+  Object.assign(c, palette);
 }
 
 const STORAGE_KEY = "pos-data-v1";
@@ -45,7 +60,7 @@ const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
 const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
-const APP_VERSION = "0.17";
+const APP_VERSION = "0.18";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -318,7 +333,7 @@ function SettingsModal({ settings, update, onClose, currentUser, accounts, updat
 
         <p className="text-xs mb-2" style={{ color: c.textDim }}>Tema Aplikasi</p>
         <div className="flex gap-2 mb-4">
-          {[{ key: "dark", label: "Gelap" }, { key: "light", label: "Terang" }].map((t) => (
+          {[{ key: "dark", label: "Gelap" }, { key: "light", label: "Terang" }, { key: "glass", label: "Liquid Glass" }].map((t) => (
             <button
               key={t.key}
               onClick={() => update({ theme: t.key })}
@@ -394,7 +409,7 @@ function LoginGate({ onLogin, accounts }) {
   return (
     <div className="w-full min-h-screen flex items-center justify-center font-sans" style={{ backgroundColor: c.bg }}>
       <div className="w-80 rounded-2xl p-6" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
-        <p className="text-lg font-semibold tracking-tight text-center mb-1" style={{ color: c.text }}>Etalase — Aplikasi Kasir</p>
+        <p className="text-lg font-semibold tracking-tight text-center mb-1" style={{ color: c.text }}>Aspho Cash</p>
         <p className="text-xs text-center mb-5" style={{ color: c.textDim }}>Masuk untuk melanjutkan</p>
 
         {!mode ? (
@@ -574,7 +589,9 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   const [cashInput, setCashInput] = useState("");
   const [cashWarning, setCashWarning] = useState("");
   const [voidConfirm, setVoidConfirm] = useState(false);
+  const [cancelReceiptConfirm, setCancelReceiptConfirm] = useState(false);
   const [receipt, setReceipt] = useState(null);
+  const [showCelebration, setShowCelebration] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -734,12 +751,39 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     });
     setReceipt(trx);
     kirimKePrintBridge(trx);
+    setShowCelebration(true);
+    setTimeout(() => setShowCelebration(false), 1800);
     setCart([]);
     setPayments([]);
     setSplitMode(false);
     setKembalianTotal(0);
     setCashInput("");
     setCashWarning("");
+  };
+
+  const batalkanTransaksiSelesai = async () => {
+    if (!receipt) return;
+    const restoredProducts = data.products.map((p) => {
+      const item = receipt.items.find((i) => i.id === p.id);
+      return item ? { ...p, etalase: p.etalase + item.qty } : p;
+    });
+    const cancelMovements = receipt.items.map((i) => ({
+      id: Date.now() + "-cancel-" + i.id,
+      productId: i.id,
+      nama: i.nama,
+      tipe: "batal_transaksi",
+      jumlah: i.qty,
+      referensi: receipt.id,
+      waktu: new Date().toISOString(),
+    }));
+    await persist({
+      ...data,
+      products: restoredProducts,
+      transactions: data.transactions.filter((t) => t.id !== receipt.id),
+      movements: [...cancelMovements, ...data.movements],
+    });
+    setReceipt(null);
+    setCancelReceiptConfirm(false);
   };
 
   const batalkanTransaksi = () => {
@@ -753,70 +797,11 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 
   useModalKeys(voidConfirm, batalkanTransaksi, () => setVoidConfirm(false));
   useModalKeys(!!receipt, null, () => setReceipt(null));
+  useModalKeys(cancelReceiptConfirm, batalkanTransaksiSelesai, () => setCancelReceiptConfirm(false));
 
   return (
     <div className="flex gap-5 p-5">
-      <div className="flex-1">
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4 sticky top-0 z-20"
-          style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}
-        >
-          <Search size={16} color={c.textDim} />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama, scan barcode, atau ketik SKU lalu Enter..."
-            className="bg-transparent outline-none text-sm w-full"
-            style={{ color: c.text }}
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {displayMode === "text" && (
-            <div className="col-span-3 rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
-              {filtered.map((p) => {
-                const habis = p.etalase <= 0;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    disabled={habis}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-left"
-                    style={{ backgroundColor: c.surface, borderBottom: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
-                  >
-                    <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
-                    <div className="flex items-center gap-4">
-                      <StokBadge n={p.etalase} />
-                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {displayMode !== "text" && filtered.map((p) => {
-            const habis = p.etalase <= 0;
-            return (
-              <button
-                key={p.id}
-                onClick={() => addToCart(p)}
-                disabled={habis}
-                className="text-left p-3 rounded-xl transition-transform active:scale-95"
-                style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
-              >
-                <div className="w-full h-14 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
-                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={20} color={c.textDim} />}
-                </div>
-                <p className="text-sm font-medium leading-tight" style={{ color: c.text }}>{p.nama}</p>
-                <p className="text-xs font-mono mt-1" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</p>
-                <StokBadge n={p.etalase} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="w-80 flex flex-col rounded-xl overflow-hidden" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+      <div className="flex-1 flex flex-col rounded-xl overflow-hidden" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px dashed ${c.border}` }}>
           <span className="text-sm font-semibold" style={{ color: c.text }}>Keranjang</span>
           <span className="text-xs font-mono" style={{ color: c.textDim }}>{cart.length} item</span>
@@ -906,6 +891,68 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
         </div>
       </div>
 
+      <div className="w-80 flex flex-col">
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4 sticky top-0 z-20"
+          style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}
+        >
+          <Search size={16} color={c.textDim} />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama, scan barcode, atau ketik SKU lalu Enter..."
+            className="bg-transparent outline-none text-sm w-full"
+            style={{ color: c.text }}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-2 overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+          {displayMode === "text" && (
+            <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+              {filtered.map((p) => {
+                const habis = p.etalase <= 0;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    disabled={habis}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+                    style={{ backgroundColor: c.surface, borderBottom: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
+                  >
+                    <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
+                    <div className="flex items-center gap-4">
+                      <StokBadge n={p.etalase} />
+                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {displayMode !== "text" && filtered.map((p) => {
+            const habis = p.etalase <= 0;
+            return (
+              <button
+                key={p.id}
+                onClick={() => addToCart(p)}
+                disabled={habis}
+                className="text-left p-3 rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3"
+                style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
+              >
+                <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
+                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={18} color={c.textDim} />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight truncate" style={{ color: c.text }}>{p.nama}</p>
+                  <p className="text-xs font-mono mt-0.5" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</p>
+                  <StokBadge n={p.etalase} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {voidConfirm && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
@@ -915,6 +962,18 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               <button onClick={() => setVoidConfirm(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Kembali</button>
               <button onClick={batalkanTransaksi} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coral, color: "#2A0E0E" }}>Ya, batalkan</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCelebration && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[60]">
+          <div
+            className="anim-pop-in px-6 py-4 rounded-2xl flex items-center gap-2 shadow-2xl"
+            style={{ backgroundColor: c.mint, color: "#0B1210" }}
+          >
+            <span className="text-2xl">🎉</span>
+            <span className="text-sm font-bold">Transaksi Berhasil!</span>
           </div>
         </div>
       )}
@@ -951,6 +1010,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               <p className="text-center text-xs px-4" style={{ color: "#0E9F63" }}>✓ Sudah dikirim otomatis ke printer</p>
             )}
             <div className="flex gap-2 p-3 no-print" style={{ backgroundColor: "#eee" }}>
+              <button onClick={() => setCancelReceiptConfirm(true)} className="py-2 px-3 rounded-lg text-xs font-medium" style={{ backgroundColor: "#f3d2d2", color: "#8a2020" }}>Batalkan</button>
               <button onClick={() => setReceipt(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: "#ddd", color: "#111" }}>Tutup</button>
               <button
                 onClick={() => (printerBridgeUrl ? kirimKePrintBridge(receipt) : window.print())}
@@ -960,6 +1020,19 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               >
                 <Printer size={12} /> {printerBridgeUrl ? (printing ? "Mencetak..." : "Cetak Ulang") : "Cetak"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelReceiptConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+            <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Batalkan transaksi {receipt?.id}?</p>
+            <p className="text-xs mb-3" style={{ color: c.textDim }}>Stok akan dikembalikan dan transaksi dihapus dari riwayat & laporan. Tindakan ini tercatat di log audit.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setCancelReceiptConfirm(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Kembali</button>
+              <button onClick={batalkanTransaksiSelesai} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coral, color: "#2A0E0E" }}>Ya, batalkan</button>
             </div>
           </div>
         </div>
@@ -1700,7 +1773,17 @@ function getPeriodInfo(periodType, refDate = new Date()) {
 
 function ProductAnalysis({ data }) {
   const [periodType, setPeriodType] = useState("mingguan");
-  const { inRange, label } = getPeriodInfo(periodType);
+  const [customRange, setCustomRange] = useState({ preset: "custom", customStart: "", customEnd: "" });
+
+  let inRange, label;
+  if (periodType === "custom") {
+    inRange = (d) => inDateRange(d, customRange);
+    label = customRange.customStart || customRange.customEnd
+      ? `${customRange.customStart || "..."} s/d ${customRange.customEnd || "..."}`
+      : "Pilih rentang tanggal di bawah";
+  } else {
+    ({ inRange, label } = getPeriodInfo(periodType));
+  }
 
   const stats = {};
   data.transactions.forEach((t) => {
@@ -1745,26 +1828,31 @@ function ProductAnalysis({ data }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <p className="text-sm font-semibold" style={{ color: c.text }}>Analisis Produk</p>
-        <div className="flex gap-1.5">
-          {[
-            { key: "mingguan", label: "Mingguan (Sab–Jum)" },
-            { key: "bulanan_masehi", label: "Bulanan Masehi" },
-            { key: "bulanan_hijriah", label: "Bulanan Hijriah" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setPeriodType(t.key)}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{ backgroundColor: periodType === t.key ? c.mint : c.surfaceAlt, color: periodType === t.key ? "#0B1210" : c.textDim }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+        {[
+          { key: "mingguan", label: "Mingguan (Sab–Jum)" },
+          { key: "bulanan_masehi", label: "Bulanan Masehi" },
+          { key: "bulanan_hijriah", label: "Bulanan Hijriah" },
+          { key: "custom", label: "Custom Tanggal" },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setPeriodType(t.key)}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium"
+            style={{ backgroundColor: periodType === t.key ? c.mint : c.surfaceAlt, color: periodType === t.key ? "#0B1210" : c.textDim }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
-      <p className="text-xs mb-3" style={{ color: c.textDim }}>Periode berjalan: {label}</p>
+      {periodType === "custom" && (
+        <div className="flex items-center gap-1 mb-2">
+          <input type="date" value={customRange.customStart} onChange={(e) => setCustomRange((prev) => ({ ...prev, customStart: e.target.value }))} className="text-xs px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, backgroundColor: "transparent", color: c.text }} />
+          <span className="text-xs" style={{ color: c.textDim }}>s/d</span>
+          <input type="date" value={customRange.customEnd} onChange={(e) => setCustomRange((prev) => ({ ...prev, customEnd: e.target.value }))} className="text-xs px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, backgroundColor: "transparent", color: c.text }} />
+        </div>
+      )}
+      <p className="text-xs mb-3" style={{ color: c.textDim }}>Periode: {label}</p>
       <div className="grid grid-cols-2 gap-3">
         <MiniTable title="Tercepat Terjual (paling sering muncul di transaksi)" rows={cepat} valueKey="freq" valueLabel="transaksi" />
         <MiniTable title="Terlambat Terjual (paling jarang muncul di transaksi)" rows={lambat} valueKey="freq" valueLabel="transaksi" />
@@ -1772,6 +1860,108 @@ function ProductAnalysis({ data }) {
         <MiniTable title="Paling Sedikit Terbeli (total unit)" rows={sedikit} valueKey="qty" valueLabel="unit" />
       </div>
     </div>
+  );
+}
+
+function inDateRange(dateStr, range) {
+  if (!range || range.preset === "semua") return true;
+  const t = new Date(dateStr).getTime();
+  if (range.preset === "custom") {
+    if (!range.customStart && !range.customEnd) return true;
+    const s = range.customStart ? new Date(range.customStart).setHours(0, 0, 0, 0) : -Infinity;
+    const e = range.customEnd ? new Date(range.customEnd).setHours(23, 59, 59, 999) : Infinity;
+    return t >= s && t <= e;
+  }
+  if (!range.start) return true;
+  return t >= range.start.getTime() && t <= range.end.getTime();
+}
+
+function DateRangeFilter({ range, setRange }) {
+  const setPreset = (preset) => {
+    const now = new Date();
+    let start = null, end = null;
+    if (preset === "hari") {
+      start = new Date(now); start.setHours(0, 0, 0, 0);
+      end = new Date(now); end.setHours(23, 59, 59, 999);
+    } else if (preset === "minggu") {
+      const r = getWeekRangeSatToFri(now);
+      start = r.start; end = r.end;
+    } else if (preset === "bulan") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (preset === "tahun") {
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+    setRange({ preset, start, end });
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+      {[
+        { k: "semua", l: "Semua" },
+        { k: "hari", l: "Hari Ini" },
+        { k: "minggu", l: "Minggu Ini" },
+        { k: "bulan", l: "Bulan Ini" },
+        { k: "tahun", l: "Tahun Ini" },
+      ].map((p) => (
+        <button
+          key={p.k}
+          onClick={() => setPreset(p.k)}
+          className="text-xs px-2.5 py-1.5 rounded-lg font-medium"
+          style={{ backgroundColor: range.preset === p.k ? c.mint : c.surfaceAlt, color: range.preset === p.k ? "#0B1210" : c.textDim }}
+        >
+          {p.l}
+        </button>
+      ))}
+      <div className="flex items-center gap-1 ml-1">
+        <input
+          type="date"
+          value={range.customStart || ""}
+          onChange={(e) => setRange({ ...range, preset: "custom", customStart: e.target.value })}
+          className="text-xs px-2 py-1.5 rounded-lg"
+          style={{ border: `1px solid ${c.border}`, backgroundColor: "transparent", color: c.text }}
+        />
+        <span className="text-xs" style={{ color: c.textDim }}>s/d</span>
+        <input
+          type="date"
+          value={range.customEnd || ""}
+          onChange={(e) => setRange({ ...range, preset: "custom", customEnd: e.target.value })}
+          className="text-xs px-2 py-1.5 rounded-lg"
+          style={{ border: `1px solid ${c.border}`, backgroundColor: "transparent", color: c.text }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ReportModal({ title, onClose, children }) {
+  useModalKeys(true, null, onClose);
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
+      <div className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl p-5" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-base font-semibold" style={{ color: c.text }}>{title}</p>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }}><X size={16} color={c.textDim} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ReportCard({ icon: Icon, title, desc, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left p-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95"
+      style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}
+    >
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: c.mintDim }}>
+        <Icon size={16} color={c.mint} />
+      </div>
+      <p className="text-sm font-medium" style={{ color: c.text }}>{title}</p>
+      <p className="text-xs mt-0.5" style={{ color: c.textDim }}>{desc}</p>
+    </button>
   );
 }
 
@@ -1783,7 +1973,6 @@ function LaporanScreen({ data }) {
 
   const kategoriMap = Object.fromEntries(data.products.map((p) => [p.id, p.kategori]));
 
-  // flatten: satu baris per item per transaksi
   const flatRows = trx.flatMap((t) =>
     t.items.map((it) => ({
       waktu: t.tanggal,
@@ -1800,12 +1989,18 @@ function LaporanScreen({ data }) {
   const totalUnitTerjual = trx.reduce((s, t) => s + t.items.reduce((ss, it) => ss + it.qty, 0), 0);
   const totalUnitMovementKeluar = data.movements.filter((m) => m.tipe === "keluar").reduce((s, m) => s + m.jumlah, 0);
   const balance = totalUnitTerjual === totalUnitMovementKeluar;
+  const fmtWaktu = (w) => new Date(w).toLocaleString("id-ID");
 
+  const [openReport, setOpenReport] = useState(null);
   const [searchLaba, setSearchLaba] = useState("");
   const [searchRiwayat, setSearchRiwayat] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
+  const [rangeNota, setRangeNota] = useState({ preset: "semua" });
+  const [rangeLaba, setRangeLaba] = useState({ preset: "semua" });
+  const [rangeRiwayat, setRangeRiwayat] = useState({ preset: "semua" });
 
   const perTrxRows = trx
+    .filter((t) => inDateRange(t.tanggal, rangeNota))
     .map((t) => ({
       invoice: t.id,
       waktu: t.tanggal,
@@ -1822,14 +2017,12 @@ function LaporanScreen({ data }) {
     return [header, ...rows].join("\n");
   };
 
-  const labaRows = flatRows.filter((r) =>
-    (r.kategori + r.nama).toLowerCase().includes(searchLaba.toLowerCase())
-  );
-  const riwayatRows = flatRows.filter((r) =>
-    (r.kategori + r.nama + r.invoice + r.kasir).toLowerCase().includes(searchRiwayat.toLowerCase())
-  );
-
-  const fmtWaktu = (w) => new Date(w).toLocaleString("id-ID");
+  const labaRows = flatRows
+    .filter((r) => inDateRange(r.waktu, rangeLaba))
+    .filter((r) => (r.kategori + r.nama).toLowerCase().includes(searchLaba.toLowerCase()));
+  const riwayatRows = flatRows
+    .filter((r) => inDateRange(r.waktu, rangeRiwayat))
+    .filter((r) => (r.kategori + r.nama + r.invoice + r.kasir).toLowerCase().includes(searchRiwayat.toLowerCase()));
 
   const labaTextForCopy = () => {
     const header = ["Waktu", "Kategori", "Barang", "Unit Terjual", "Omzet", "Laba Kotor"].join("\t");
@@ -1859,134 +2052,148 @@ function LaporanScreen({ data }) {
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold" style={{ color: c.text }}>Laporan per Transaksi</p>
-          <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold mb-2" style={{ color: c.text }}>Pilih Laporan</p>
+        <div className="grid grid-cols-2 gap-3">
+          <ReportCard icon={FileText} title="Riwayat Transaksi (per Nota)" desc="Satu baris per transaksi — invoice, kasir, jumlah item, total" onClick={() => setOpenReport("nota")} />
+          <ReportCard icon={TrendingUp} title="Analisis Produk" desc="Barang tercepat/terlambat terjual, terbanyak/tersedikit terbeli" onClick={() => setOpenReport("analisis")} />
+          <ReportCard icon={BarChart3} title="Laba per Kategori" desc="Rincian omzet & laba kotor per kategori barang" onClick={() => setOpenReport("laba")} />
+          <ReportCard icon={List} title="Riwayat Transaksi (per Kasir)" desc="Satu baris per barang terjual, lengkap dengan nama kasir" onClick={() => setOpenReport("riwayat")} />
+        </div>
+      </div>
+
+      {openReport === "nota" && (
+        <ReportModal title="Riwayat Transaksi (per Nota)" onClose={() => setOpenReport(null)}>
+          <DateRangeFilter range={rangeNota} setRange={setRangeNota} />
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
               <Search size={12} color={c.textDim} />
               <input value={searchTrx} onChange={(e) => setSearchTrx(e.target.value)} placeholder="Cari invoice/kasir..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
             </div>
             <CopyButton getText={trxTextForCopy} />
           </div>
-        </div>
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
-                <th className="text-left px-4 py-2 font-medium">Invoice</th>
-                <th className="text-left px-4 py-2 font-medium">Waktu</th>
-                <th className="text-left px-4 py-2 font-medium">Kasir</th>
-                <th className="text-right px-4 py-2 font-medium">Jumlah Item</th>
-                <th className="text-right px-4 py-2 font-medium">Jenis Barang</th>
-                <th className="text-right px-4 py-2 font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perTrxRows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Belum ada transaksi.</td></tr>
-              )}
-              {perTrxRows.map((r) => (
-                <tr key={r.invoice} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
-                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
-                  <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.total)}</td>
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                  <th className="text-left px-4 py-2 font-medium">Invoice</th>
+                  <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                  <th className="text-left px-4 py-2 font-medium">Kasir</th>
+                  <th className="text-right px-4 py-2 font-medium">Jumlah Item</th>
+                  <th className="text-right px-4 py-2 font-medium">Jenis Barang</th>
+                  <th className="text-right px-4 py-2 font-medium">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {perTrxRows.length === 0 && (
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
+                )}
+                {perTrxRows.map((r) => (
+                  <tr key={r.invoice} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                    <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
+                    <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                    <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ReportModal>
+      )}
 
-      <ProductAnalysis data={data} />
+      {openReport === "analisis" && (
+        <ReportModal title="Analisis Produk" onClose={() => setOpenReport(null)}>
+          <ProductAnalysis data={data} />
+        </ReportModal>
+      )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold" style={{ color: c.text }}>Laba per Kategori</p>
-          <div className="flex items-center gap-2">
+      {openReport === "laba" && (
+        <ReportModal title="Laba per Kategori" onClose={() => setOpenReport(null)}>
+          <DateRangeFilter range={rangeLaba} setRange={setRangeLaba} />
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
               <Search size={12} color={c.textDim} />
               <input value={searchLaba} onChange={(e) => setSearchLaba(e.target.value)} placeholder="Cari kategori/barang..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
             </div>
             <CopyButton getText={labaTextForCopy} />
           </div>
-        </div>
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
-                <th className="text-left px-4 py-2 font-medium">Waktu</th>
-                <th className="text-left px-4 py-2 font-medium">Kategori</th>
-                <th className="text-left px-4 py-2 font-medium">Barang</th>
-                <th className="text-right px-4 py-2 font-medium">Unit Terjual</th>
-                <th className="text-right px-4 py-2 font-medium">Omzet</th>
-                <th className="text-right px-4 py-2 font-medium">Laba Kotor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {labaRows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
-              )}
-              {labaRows.map((r, idx) => (
-                <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
-                  <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
-                  <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.laba)}</td>
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                  <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                  <th className="text-left px-4 py-2 font-medium">Kategori</th>
+                  <th className="text-left px-4 py-2 font-medium">Barang</th>
+                  <th className="text-right px-4 py-2 font-medium">Unit Terjual</th>
+                  <th className="text-right px-4 py-2 font-medium">Omzet</th>
+                  <th className="text-right px-4 py-2 font-medium">Laba Kotor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {labaRows.length === 0 && (
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
+                )}
+                {labaRows.map((r, idx) => (
+                  <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                    <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                    <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
+                    <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.laba)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ReportModal>
+      )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold" style={{ color: c.text }}>Riwayat Transaksi (per Kasir)</p>
-          <div className="flex items-center gap-2">
+      {openReport === "riwayat" && (
+        <ReportModal title="Riwayat Transaksi (per Kasir)" onClose={() => setOpenReport(null)}>
+          <DateRangeFilter range={rangeRiwayat} setRange={setRangeRiwayat} />
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
               <Search size={12} color={c.textDim} />
               <input value={searchRiwayat} onChange={(e) => setSearchRiwayat(e.target.value)} placeholder="Cari kasir/invoice/barang..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
             </div>
             <CopyButton getText={riwayatTextForCopy} />
           </div>
-        </div>
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
-                <th className="text-left px-4 py-2 font-medium">Waktu</th>
-                <th className="text-left px-4 py-2 font-medium">Kategori</th>
-                <th className="text-left px-4 py-2 font-medium">Barang</th>
-                <th className="text-left px-4 py-2 font-medium">Invoice</th>
-                <th className="text-right px-4 py-2 font-medium">Item</th>
-                <th className="text-right px-4 py-2 font-medium">Total</th>
-                <th className="text-left px-4 py-2 font-medium">Kasir</th>
-              </tr>
-            </thead>
-            <tbody>
-              {riwayatRows.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
-              )}
-              {riwayatRows.map((r, idx) => (
-                <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                  <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
-                  <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
-                  <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.omzet)}</td>
-                  <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                  <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                  <th className="text-left px-4 py-2 font-medium">Kategori</th>
+                  <th className="text-left px-4 py-2 font-medium">Barang</th>
+                  <th className="text-left px-4 py-2 font-medium">Invoice</th>
+                  <th className="text-right px-4 py-2 font-medium">Item</th>
+                  <th className="text-right px-4 py-2 font-medium">Total</th>
+                  <th className="text-left px-4 py-2 font-medium">Kasir</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {riwayatRows.length === 0 && (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
+                )}
+                {riwayatRows.map((r, idx) => (
+                  <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                    <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                    <td className="px-4 py-2" style={{ color: c.text }}>{r.kategori}</td>
+                    <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
+                    <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.omzet)}</td>
+                    <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ReportModal>
+      )}
     </div>
   );
 }
@@ -2016,11 +2223,11 @@ export default function App() {
   }
 
   return (
-    <div className="w-full min-h-screen font-sans" style={{ backgroundColor: c.bg }}>
+    <div className={`w-full min-h-screen font-sans ${settings.theme === "glass" ? "glass-mode" : ""}`} style={{ backgroundColor: c.bg }}>
       <div className="px-5 pt-5 flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
-            Etalase — Aplikasi Kasir <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
+            Aspho Cash <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
           </p>
           <p className="text-xs mt-0.5" style={{ color: c.textDim }}>Data tersimpan otomatis di sesi kamu</p>
         </div>
