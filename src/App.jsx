@@ -35,23 +35,60 @@ const lightPalette = {
   coral: "#C43F3A",
   coralDim: "rgba(196,63,58,0.10)",
 };
-const glassPalette = {
-  bg: "transparent",
-  surface: "rgba(255,255,255,0.14)",
-  surfaceAlt: "rgba(255,255,255,0.09)",
-  border: "rgba(255,255,255,0.28)",
-  text: "#FFFFFF",
-  textDim: "rgba(255,255,255,0.72)",
-  mint: "#5EEAD4",
-  mintDim: "rgba(94,234,212,0.22)",
-  amber: "#FDE68A",
-  amberDim: "rgba(253,230,138,0.22)",
-  coral: "#FCA5A5",
-  coralDim: "rgba(252,165,165,0.22)",
+const GLASS_THEMES = {
+  aurora: {
+    label: "Aurora Blue",
+    gradient: "linear-gradient(160deg, #0F172A 0%, #1D4ED8 55%, #60A5FA 100%)",
+    blobs: ["rgba(99,102,241,0.35)", "rgba(59,130,246,0.30)", "rgba(6,182,212,0.25)"],
+    accent: "#3B82F6",
+  },
+  midnight: {
+    label: "Midnight Purple",
+    gradient: "linear-gradient(160deg, #09090B 0%, #312E81 55%, #6366F1 100%)",
+    blobs: ["rgba(49,46,129,0.45)", "rgba(168,85,247,0.30)", "rgba(99,102,241,0.25)"],
+    accent: "#A855F7",
+  },
+  emerald: {
+    label: "Emerald Glass",
+    gradient: "linear-gradient(160deg, #052E16 0%, #065F46 55%, #10B981 100%)",
+    blobs: ["rgba(6,95,70,0.45)", "rgba(16,185,129,0.30)", "rgba(110,231,183,0.20)"],
+    accent: "#10B981",
+  },
+  sunset: {
+    label: "Sunset Orange",
+    gradient: "linear-gradient(160deg, #7C2D12 0%, #EA580C 55%, #FB923C 100%)",
+    blobs: ["rgba(124,45,18,0.45)", "rgba(234,88,12,0.30)", "rgba(251,146,60,0.22)"],
+    accent: "#FB923C",
+  },
+  monochrome: {
+    label: "Monochrome Glass",
+    gradient: "linear-gradient(160deg, #111827 0%, #374151 55%, #6B7280 100%)",
+    blobs: ["rgba(55,65,81,0.45)", "rgba(107,114,128,0.30)", "rgba(147,197,253,0.18)"],
+    accent: "#93C5FD",
+  },
 };
+
+function getGlassPalette(themeKey) {
+  const t = GLASS_THEMES[themeKey] || GLASS_THEMES.aurora;
+  return {
+    bg: "transparent",
+    surface: "rgba(255,255,255,0.15)",
+    surfaceAlt: "rgba(255,255,255,0.09)",
+    border: "rgba(255,255,255,0.25)",
+    text: "#FFFFFF",
+    textDim: "rgba(255,255,255,0.72)",
+    mint: t.accent,
+    mintDim: "rgba(255,255,255,0.18)",
+    amber: "#F59E0B",
+    amberDim: "rgba(245,158,11,0.20)",
+    coral: "#EF4444",
+    coralDim: "rgba(239,68,68,0.20)",
+  };
+}
+
 let c = { ...darkPalette };
-function applyTheme(mode) {
-  const palette = mode === "light" ? lightPalette : mode === "glass" ? glassPalette : darkPalette;
+function applyTheme(mode, glassColorTheme) {
+  const palette = mode === "light" ? lightPalette : mode === "glass" ? getGlassPalette(glassColorTheme) : darkPalette;
   Object.assign(c, palette);
 }
 
@@ -60,7 +97,7 @@ const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
 const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
-const APP_VERSION = "0.18";
+const APP_VERSION = "0.19";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -204,7 +241,7 @@ function useSettings() {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { theme: "dark", kasirDisplay: "visual", printerBridgeUrl: "" };
+    return { theme: "dark", kasirDisplay: "visual", printerBridgeUrl: "", glassColorTheme: "aurora", glassBlur: 20 };
   });
 
   const update = (patch) => {
@@ -349,7 +386,45 @@ function SettingsModal({ settings, update, onClose, currentUser, accounts, updat
           ))}
         </div>
 
-        <p className="text-xs mb-2" style={{ color: c.textDim }}>Tampilan Layar Kasir</p>
+        {settings.theme === "glass" && (
+          <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+            <p className="text-xs mb-2" style={{ color: c.textDim }}>Warna Dasar Liquid Glass</p>
+            <div className="grid grid-cols-2 gap-1.5 mb-3">
+              {Object.entries(GLASS_THEMES).map(([key, t]) => (
+                <button
+                  key={key}
+                  onClick={() => update({ glassColorTheme: key })}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{
+                    backgroundColor: settings.glassColorTheme === key ? c.mint : c.surface,
+                    color: settings.glassColorTheme === key ? "#0B1210" : c.textDim,
+                    border: `1px solid ${c.border}`,
+                  }}
+                >
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: t.gradient }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mb-2" style={{ color: c.textDim }}>Ketebalan Efek Kaca</p>
+            <div className="flex gap-1.5">
+              {[{ v: 10, l: "Tipis" }, { v: 20, l: "Sedang" }, { v: 40, l: "Tebal" }].map((b) => (
+                <button
+                  key={b.v}
+                  onClick={() => update({ glassBlur: b.v })}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                  style={{
+                    backgroundColor: settings.glassBlur === b.v ? c.mint : c.surface,
+                    color: settings.glassBlur === b.v ? "#0B1210" : c.textDim,
+                    border: `1px solid ${c.border}`,
+                  }}
+                >
+                  {b.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex gap-2 mb-5">
           {[{ key: "visual", label: "Bergambar" }, { key: "text", label: "Teks Saja" }].map((t) => (
             <button
@@ -2206,7 +2281,7 @@ export default function App() {
   const { accounts, update: updateAccounts } = useAccounts();
   const { data, persist, status } = useStorage();
 
-  applyTheme(settings.theme);
+  applyTheme(settings.theme, settings.glassColorTheme);
 
   if (status === "loading" || !data) {
     return (
@@ -2222,8 +2297,24 @@ export default function App() {
     return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
   }
 
+  const isGlass = settings.theme === "glass";
+  const glassTheme = GLASS_THEMES[settings.glassColorTheme] || GLASS_THEMES.aurora;
+
   return (
-    <div className={`w-full min-h-screen font-sans ${settings.theme === "glass" ? "glass-mode" : ""}`} style={{ backgroundColor: c.bg }}>
+    <div
+      className={`relative w-full min-h-screen font-sans ${isGlass ? "glass-mode" : ""}`}
+      style={{
+        backgroundColor: c.bg,
+        ...(isGlass ? { background: glassTheme.gradient, "--glass-blur": `${settings.glassBlur}px` } : {}),
+      }}
+    >
+      {isGlass && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="absolute rounded-full" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
+          <div className="absolute rounded-full" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
+          <div className="absolute rounded-full" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
+        </div>
+      )}
       <div className="px-5 pt-5 flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
