@@ -13,9 +13,11 @@ const darkPalette = {
   surfaceAlt: "#222B30",
   border: "#2C363B",
   text: "#EDEFEF",
-  textDim: "#8FA0A6",
+  textDim: "#A9B7BC",
+  textFaint: "#6C7A80",
   mint: "#3ECF8E",
   mintDim: "rgba(62,207,142,0.14)",
+  success: "#3ECF8E",
   amber: "#F2B84B",
   amberDim: "rgba(242,184,75,0.14)",
   coral: "#EF6B6B",
@@ -27,9 +29,11 @@ const lightPalette = {
   surfaceAlt: "#EFEEE8",
   border: "#DEDCD4",
   text: "#1C1F21",
-  textDim: "#6B7280",
+  textDim: "#5B6570",
+  textFaint: "#8A929A",
   mint: "#0E9F63",
   mintDim: "rgba(14,159,99,0.12)",
+  success: "#0E9F63",
   amber: "#B07A0A",
   amberDim: "rgba(176,122,10,0.12)",
   coral: "#C43F3A",
@@ -41,30 +45,40 @@ const GLASS_THEMES = {
     gradient: "linear-gradient(160deg, #0F172A 0%, #1D4ED8 55%, #60A5FA 100%)",
     blobs: ["rgba(99,102,241,0.35)", "rgba(59,130,246,0.30)", "rgba(6,182,212,0.25)"],
     accent: "#3B82F6",
+    ctaGradient: "linear-gradient(135deg, #4F8DFF, #2F6FFF)",
+    tabTint: { kasir: "rgba(59,130,246,0.16)", katalog: "rgba(59,130,246,0.10)", gudang: "rgba(6,182,212,0.16)", opname: "rgba(6,182,212,0.10)", laporan: "rgba(168,85,247,0.16)" },
   },
   midnight: {
     label: "Midnight Purple",
     gradient: "linear-gradient(160deg, #09090B 0%, #312E81 55%, #6366F1 100%)",
     blobs: ["rgba(49,46,129,0.45)", "rgba(168,85,247,0.30)", "rgba(99,102,241,0.25)"],
     accent: "#A855F7",
+    ctaGradient: "linear-gradient(135deg, #A78BFA, #7C3AED)",
+    tabTint: { kasir: "rgba(168,85,247,0.16)", katalog: "rgba(168,85,247,0.10)", gudang: "rgba(99,102,241,0.16)", opname: "rgba(99,102,241,0.10)", laporan: "rgba(217,70,239,0.16)" },
   },
   emerald: {
     label: "Emerald Glass",
     gradient: "linear-gradient(160deg, #052E16 0%, #065F46 55%, #10B981 100%)",
     blobs: ["rgba(6,95,70,0.45)", "rgba(16,185,129,0.30)", "rgba(110,231,183,0.20)"],
     accent: "#10B981",
+    ctaGradient: "linear-gradient(135deg, #34D399, #059669)",
+    tabTint: { kasir: "rgba(16,185,129,0.16)", katalog: "rgba(16,185,129,0.10)", gudang: "rgba(6,182,212,0.16)", opname: "rgba(6,182,212,0.10)", laporan: "rgba(20,184,166,0.16)" },
   },
   sunset: {
     label: "Sunset Orange",
     gradient: "linear-gradient(160deg, #7C2D12 0%, #EA580C 55%, #FB923C 100%)",
     blobs: ["rgba(124,45,18,0.45)", "rgba(234,88,12,0.30)", "rgba(251,146,60,0.22)"],
     accent: "#FB923C",
+    ctaGradient: "linear-gradient(135deg, #FDBA74, #F97316)",
+    tabTint: { kasir: "rgba(251,146,60,0.16)", katalog: "rgba(251,146,60,0.10)", gudang: "rgba(234,88,12,0.16)", opname: "rgba(234,88,12,0.10)", laporan: "rgba(220,38,38,0.12)" },
   },
   monochrome: {
     label: "Monochrome Glass",
     gradient: "linear-gradient(160deg, #111827 0%, #374151 55%, #6B7280 100%)",
     blobs: ["rgba(55,65,81,0.45)", "rgba(107,114,128,0.30)", "rgba(147,197,253,0.18)"],
     accent: "#93C5FD",
+    ctaGradient: "linear-gradient(135deg, #60A5FA, #2563EB)",
+    tabTint: { kasir: "rgba(147,197,253,0.14)", katalog: "rgba(147,197,253,0.08)", gudang: "rgba(107,114,128,0.16)", opname: "rgba(107,114,128,0.10)", laporan: "rgba(209,213,219,0.10)" },
   },
 };
 
@@ -76,9 +90,11 @@ function getGlassPalette(themeKey) {
     surfaceAlt: "rgba(255,255,255,0.09)",
     border: "rgba(255,255,255,0.25)",
     text: "#FFFFFF",
-    textDim: "rgba(255,255,255,0.72)",
+    textDim: "rgba(255,255,255,0.78)",
+    textFaint: "rgba(255,255,255,0.55)",
     mint: t.accent,
     mintDim: "rgba(255,255,255,0.18)",
+    success: "#22C55E",
     amber: "#F59E0B",
     amberDim: "rgba(245,158,11,0.20)",
     coral: "#EF4444",
@@ -87,7 +103,9 @@ function getGlassPalette(themeKey) {
 }
 
 let c = { ...darkPalette };
+let currentThemeMode = "dark";
 function applyTheme(mode, glassColorTheme) {
+  currentThemeMode = mode;
   const palette = mode === "light" ? lightPalette : mode === "glass" ? getGlassPalette(glassColorTheme) : darkPalette;
   Object.assign(c, palette);
 }
@@ -97,7 +115,7 @@ const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
 const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
-const APP_VERSION = "0.19";
+const APP_VERSION = "0.20";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -553,7 +571,7 @@ function Nav({ tab, setTab }) {
     { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Ringkasan omzet, laba per kategori, dan riwayat transaksi per kasir." },
   ];
   return (
-    <div className="flex flex-wrap gap-2 px-5 pt-5 pb-4 border-b" style={{ borderColor: c.border }}>
+    <div className="flex flex-wrap gap-1.5 px-5 pt-3 pb-2.5 border-b" style={{ borderColor: c.border }}>
       {items.map((it) => {
         const active = tab === it.key;
         const Icon = it.icon;
@@ -561,14 +579,14 @@ function Nav({ tab, setTab }) {
           <div key={it.key} className="relative group">
             <button
               onClick={() => setTab(it.key)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
               style={{
                 backgroundColor: active ? c.mintDim : "transparent",
                 color: active ? c.mint : c.textDim,
                 border: `1px solid ${active ? c.mint : "transparent"}`,
               }}
             >
-              <Icon size={16} />
+              <Icon size={15} />
               {it.label}
             </button>
             <div
@@ -649,13 +667,47 @@ function QtyInput({ value, max, onCommit }) {
   );
 }
 
+function categoryEmoji(kategori) {
+  const k = (kategori || "").toLowerCase();
+  if (k.includes("minum") || k.includes("kopi") || k.includes("teh") || k.includes("susu")) return "🥤";
+  if (k.includes("makan") || k.includes("snack") || k.includes("kue") || k.includes("roti")) return "🍪";
+  if (k.includes("sembako") || k.includes("beras") || k.includes("gula") || k.includes("minyak")) return "🧂";
+  if (k.includes("bersih") || k.includes("sabun") || k.includes("cuci")) return "🧼";
+  if (k.includes("tulis") || k.includes("atk") || k.includes("kertas") || k.includes("buku") || k.includes("stationery")) return "✏️";
+  if (k.includes("fotokopi") || k.includes("photocopy") || k.includes("print")) return "🖨️";
+  if (k.includes("rokok")) return "🚬";
+  if (k.includes("obat") || k.includes("kesehatan")) return "💊";
+  return "📦";
+}
+
+function searchBarStyle() {
+  if (currentThemeMode === "glass") {
+    return { backgroundColor: "rgba(255,255,255,0.20)", border: "1px solid rgba(255,255,255,0.35)" };
+  }
+  return { backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` };
+}
+
+function ctaStyle(enabled, glassColorTheme) {
+  if (!enabled) return { backgroundColor: c.surfaceAlt, color: c.textDim };
+  if (currentThemeMode === "glass") {
+    const t = GLASS_THEMES[glassColorTheme] || GLASS_THEMES.aurora;
+    return { background: t.ctaGradient, color: "#fff", boxShadow: "0 4px 16px -2px rgba(0,0,0,0.35)" };
+  }
+  return { backgroundColor: c.mint, color: "#0B1210" };
+}
+
 function StokBadge({ n }) {
-  const color = n <= 0 ? c.coral : n <= 5 ? c.amber : c.textDim;
-  return <span className="font-mono text-[11px]" style={{ color }}>Stok: {n}</span>;
+  const color = n <= 0 ? c.coral : n <= 5 ? c.amber : n <= 10 ? "#EAB308" : c.success;
+  return (
+    <span className="font-mono text-[11px] inline-flex items-center gap-1" style={{ color }}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      Stok: {n}
+    </span>
+  );
 }
 
 // ---------------- KASIR ----------------
-function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl }) {
+function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl, glassColorTheme }) {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [splitMode, setSplitMode] = useState(false);
@@ -667,6 +719,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   const [cancelReceiptConfirm, setCancelReceiptConfirm] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [cartBump, setCartBump] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -691,6 +744,8 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       }
       return [...prev, { ...p, qty: 1 }];
     });
+    setCartBump(true);
+    setTimeout(() => setCartBump(false), 300);
   };
 
   // Penangkap scan global: cadangan kalau fokus kursor kebetulan gak lagi di kolom cari.
@@ -876,10 +931,17 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 
   return (
     <div className="flex gap-5 p-5">
-      <div className="flex-1 flex flex-col rounded-xl overflow-hidden" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+      <div
+        className="flex-1 flex flex-col rounded-xl overflow-hidden"
+        style={{
+          backgroundColor: currentThemeMode === "glass" ? "rgba(255,255,255,0.20)" : c.surface,
+          border: `1px solid ${currentThemeMode === "glass" ? "rgba(255,255,255,0.35)" : c.border}`,
+          boxShadow: currentThemeMode === "glass" ? "0 12px 40px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" : `0 4px 16px -6px ${c.bg}`,
+        }}
+      >
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px dashed ${c.border}` }}>
           <span className="text-sm font-semibold" style={{ color: c.text }}>Keranjang</span>
-          <span className="text-xs font-mono" style={{ color: c.textDim }}>{cart.length} item</span>
+          <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${cartBump ? "anim-wiggle" : ""}`} style={{ color: cartBump ? "#fff" : c.textDim, backgroundColor: cartBump ? c.success : "transparent" }}>{cart.length} item</span>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2" style={{ maxHeight: 300 }}>
           {cart.length === 0 && <p className="text-xs text-center py-8" style={{ color: c.textDim }}>Belum ada barang.</p>}
@@ -905,8 +967,8 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
             <button
               disabled={cart.length === 0}
               onClick={() => setSplitMode(true)}
-              className="w-full mt-2 py-2 rounded-lg text-sm font-medium"
-              style={{ backgroundColor: cart.length ? c.mint : c.surfaceAlt, color: cart.length ? "#0B1210" : c.textDim }}
+              className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all active:scale-95"
+              style={ctaStyle(cart.length > 0, glassColorTheme)}
             >
               Bayar
             </button>
@@ -957,7 +1019,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               )}
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setVoidConfirm(true)} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coralDim, color: c.coral }}>Batalkan</button>
-                <button onClick={selesaikanTransaksi} disabled={sisa > 0} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1" style={{ backgroundColor: sisa <= 0 ? c.mint : c.surfaceAlt, color: sisa <= 0 ? "#0B1210" : c.textDim }}>
+                <button onClick={selesaikanTransaksi} disabled={sisa > 0} className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-all active:scale-95" style={ctaStyle(sisa <= 0, glassColorTheme)}>
                   <Check size={12} /> Selesai
                 </button>
               </div>
@@ -969,7 +1031,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       <div className="w-80 flex flex-col">
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4 sticky top-0 z-20"
-          style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}
+          style={{ ...searchBarStyle(), boxShadow: `0 4px 8px -4px ${c.bg}` }}
         >
           <Search size={16} color={c.textDim} />
           <input
@@ -997,7 +1059,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                     <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
                     <div className="flex items-center gap-4">
                       <StokBadge n={p.etalase} />
-                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</span>
+                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.success }}>{rupiah(p.hargaJual)}</span>
                     </div>
                   </button>
                 );
@@ -1015,11 +1077,11 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                 style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
               >
                 <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
-                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={18} color={c.textDim} />}
+                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <span className="text-xl">{categoryEmoji(p.kategori)}</span>}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium leading-tight truncate" style={{ color: c.text }}>{p.nama}</p>
-                  <p className="text-xs font-mono mt-0.5" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</p>
+                  <p className="text-xs font-mono mt-0.5" style={{ color: c.success }}>{rupiah(p.hargaJual)}</p>
                   <StokBadge n={p.etalase} />
                 </div>
               </button>
@@ -1134,7 +1196,7 @@ function KatalogScreen({ data }) {
         <button onClick={() => setMode("text")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "text" ? c.mintDim : c.surfaceAlt, color: mode === "text" ? c.mint : c.textDim }}>
           <List size={13} /> Teks
         </button>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={searchBarStyle()}>
           <Search size={14} color={c.textDim} />
           <input
             value={search}
@@ -1154,11 +1216,11 @@ function KatalogScreen({ data }) {
           {filtered.map((p) => (
             <div key={p.id} className="rounded-xl p-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
               <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
-                {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={26} color={c.textDim} />}
+                {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <span className="text-3xl">{categoryEmoji(p.kategori)}</span>}
               </div>
               <p className="text-sm font-medium" style={{ color: c.text }}>{p.nama}</p>
               <p className="text-xs" style={{ color: c.textDim }}>{p.kategori}</p>
-              <p className="text-sm font-mono mt-1" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</p>
+              <p className="text-sm font-mono mt-1" style={{ color: c.success }}>{rupiah(p.hargaJual)}</p>
             </div>
           ))}
         </div>
@@ -1182,7 +1244,7 @@ function KatalogScreen({ data }) {
                   <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{p.sku}</td>
                   <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
                   <td className="px-4 py-2" style={{ color: c.textDim }}>{p.kategori}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(p.hargaJual)}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(p.hargaJual)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1432,7 +1494,7 @@ function GudangScreen({ data, persist, role }) {
   return (
     <div className="p-5 flex gap-5">
       <div className="flex-1 space-y-3">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg sticky top-0 z-20" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}`, boxShadow: `0 4px 8px -4px ${c.bg}` }}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg sticky top-0 z-20" style={{ ...searchBarStyle(), boxShadow: `0 4px 8px -4px ${c.bg}` }}>
           <Search size={16} color={c.textDim} />
           <input
             value={search}
@@ -1726,7 +1788,7 @@ function OpnameScreen({ data, persist }) {
   return (
     <div className="p-5">
       <div className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2" style={{ backgroundColor: c.bg }}>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={searchBarStyle()}>
           <Search size={14} color={c.textDim} />
           <input
             value={search}
@@ -2113,17 +2175,23 @@ function LaporanScreen({ data }) {
   return (
     <div className="p-5 space-y-5">
       <div className="grid grid-cols-4 gap-3">
+        <div className="col-span-2 rounded-xl p-5" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, boxShadow: `0 4px 20px -6px ${c.success}33` }}>
+          <p className="text-xs mb-1.5" style={{ color: c.textDim }}>Omzet</p>
+          <p className="text-3xl font-mono font-bold" style={{ color: c.success }}>{rupiah(omzet)}</p>
+        </div>
         {[
-          { label: "Omzet", value: rupiah(omzet), color: c.mint },
-          { label: "Laba Kotor", value: rupiah(labaKotor), color: c.mint },
+          { label: "Laba Kotor", value: rupiah(labaKotor), color: c.success },
           { label: "Jumlah Transaksi", value: jumlahTrx, color: c.text },
-          { label: "Balance Stok vs Transaksi", value: balance ? "Cocok ✓" : "Selisih!", color: balance ? c.mint : c.coral },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
             <p className="text-[11px] mb-1" style={{ color: c.textDim }}>{s.label}</p>
             <p className="text-lg font-mono font-semibold" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
+        <div className="col-span-4 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <p className="text-[11px] mb-1" style={{ color: c.textDim }}>Balance Stok vs Transaksi</p>
+          <p className="text-lg font-mono font-semibold" style={{ color: balance ? c.success : c.coral }}>{balance ? "Cocok ✓" : "Selisih!"}</p>
+        </div>
       </div>
 
       <div>
@@ -2169,7 +2237,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.total)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2217,7 +2285,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.laba)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.laba)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2260,7 +2328,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
                     <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.mint }}>{rupiah(r.omzet)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.omzet)}</td>
                     <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
                   </tr>
                 ))}
@@ -2313,9 +2381,13 @@ export default function App() {
           <div className="absolute rounded-full" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
           <div className="absolute rounded-full" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
           <div className="absolute rounded-full" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: glassTheme.tabTint?.[tab] || "transparent", transition: "background-color 300ms ease" }}
+          />
         </div>
       )}
-      <div className="px-5 pt-5 flex items-center justify-between">
+      <div className="px-5 pt-3 pb-1 flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
             Aspho Cash <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
@@ -2346,7 +2418,7 @@ export default function App() {
         </div>
       </div>
       <Nav tab={tab} setTab={setTab} />
-      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} printerBridgeUrl={settings.printerBridgeUrl} />}
+      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} printerBridgeUrl={settings.printerBridgeUrl} glassColorTheme={settings.glassColorTheme} />}
       {tab === "katalog" && <KatalogScreen data={data} />}
       {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
       {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
