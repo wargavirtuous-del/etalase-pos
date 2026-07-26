@@ -8,19 +8,13 @@ html, body, #root {
 }
 
 .glass-mode {
-  background: linear-gradient(135deg, #4F46E5, #7C3AED, #2563EB, #0EA5E9, #7C3AED);
-  background-size: 400% 400%;
-  animation: glassGradient 18s ease infinite;
-}
-@keyframes glassGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  background-attachment: fixed;
 }
 .glass-mode [style*="background-color: rgba(255"] {
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
   box-shadow: 0 8px 32px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+  transition: backdrop-filter 0.25s ease;
 }
 
 @keyframes popIn {
