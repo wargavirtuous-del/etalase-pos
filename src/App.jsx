@@ -17,7 +17,7 @@ const darkPalette = {
   textFaint: "#6C7A80",
   mint: "#3ECF8E",
   mintDim: "rgba(62,207,142,0.14)",
-  success: "#3ECF8E",
+  success: "#4ADE80",
   amber: "#F2B84B",
   amberDim: "rgba(242,184,75,0.14)",
   coral: "#EF6B6B",
@@ -33,7 +33,7 @@ const lightPalette = {
   textFaint: "#8A929A",
   mint: "#0E9F63",
   mintDim: "rgba(14,159,99,0.12)",
-  success: "#0E9F63",
+  success: "#059669",
   amber: "#B07A0A",
   amberDim: "rgba(176,122,10,0.12)",
   coral: "#C43F3A",
@@ -94,7 +94,7 @@ function getGlassPalette(themeKey) {
     textFaint: "rgba(255,255,255,0.55)",
     mint: t.accent,
     mintDim: "rgba(255,255,255,0.18)",
-    success: "#22C55E",
+    success: "#4ADE80",
     amber: "#F59E0B",
     amberDim: "rgba(245,158,11,0.20)",
     coral: "#EF4444",
@@ -115,7 +115,7 @@ const SETTINGS_KEY = "pos-settings-v1";
 const STORE_NAME = "Asia Stationery and Photocopy";
 const STORE_PHONE = "0857-0703-3705";
 const STORE_ADDRESS = "Jl. Widotomo No.29, Gontor, Mlarak, Ponorogo, Jawa Timur, Indonesia, Bumi";
-const APP_VERSION = "0.20";
+const APP_VERSION = "0.21";
 
 const ACCOUNTS_KEY = "pos-accounts-v1";
 const DEFAULT_ADMIN_ACCOUNTS = [
@@ -667,17 +667,12 @@ function QtyInput({ value, max, onCommit }) {
   );
 }
 
-function categoryEmoji(kategori) {
-  const k = (kategori || "").toLowerCase();
-  if (k.includes("minum") || k.includes("kopi") || k.includes("teh") || k.includes("susu")) return "🥤";
-  if (k.includes("makan") || k.includes("snack") || k.includes("kue") || k.includes("roti")) return "🍪";
-  if (k.includes("sembako") || k.includes("beras") || k.includes("gula") || k.includes("minyak")) return "🧂";
-  if (k.includes("bersih") || k.includes("sabun") || k.includes("cuci")) return "🧼";
-  if (k.includes("tulis") || k.includes("atk") || k.includes("kertas") || k.includes("buku") || k.includes("stationery")) return "✏️";
-  if (k.includes("fotokopi") || k.includes("photocopy") || k.includes("print")) return "🖨️";
-  if (k.includes("rokok")) return "🚬";
-  if (k.includes("obat") || k.includes("kesehatan")) return "💊";
-  return "📦";
+function successTextStyle() {
+  return {
+    color: c.success,
+    fontWeight: 700,
+    textShadow: currentThemeMode === "glass" ? "0 1px 4px rgba(0,0,0,0.45)" : "none",
+  };
 }
 
 function searchBarStyle() {
@@ -1059,7 +1054,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                     <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
                     <div className="flex items-center gap-4">
                       <StokBadge n={p.etalase} />
-                      <span className="text-xs font-mono w-20 text-right" style={{ color: c.success }}>{rupiah(p.hargaJual)}</span>
+                      <span className="text-xs font-mono w-20 text-right" style={successTextStyle()}>{rupiah(p.hargaJual)}</span>
                     </div>
                   </button>
                 );
@@ -1077,11 +1072,11 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                 style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
               >
                 <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
-                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <span className="text-xl">{categoryEmoji(p.kategori)}</span>}
+                  {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={18} color={c.textDim} />}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium leading-tight truncate" style={{ color: c.text }}>{p.nama}</p>
-                  <p className="text-xs font-mono mt-0.5" style={{ color: c.success }}>{rupiah(p.hargaJual)}</p>
+                  <p className="text-xs font-mono mt-0.5" style={successTextStyle()}>{rupiah(p.hargaJual)}</p>
                   <StokBadge n={p.etalase} />
                 </div>
               </button>
@@ -1216,11 +1211,11 @@ function KatalogScreen({ data }) {
           {filtered.map((p) => (
             <div key={p.id} className="rounded-xl p-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
               <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
-                {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <span className="text-3xl">{categoryEmoji(p.kategori)}</span>}
+                {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={26} color={c.textDim} />}
               </div>
               <p className="text-sm font-medium" style={{ color: c.text }}>{p.nama}</p>
               <p className="text-xs" style={{ color: c.textDim }}>{p.kategori}</p>
-              <p className="text-sm font-mono mt-1" style={{ color: c.success }}>{rupiah(p.hargaJual)}</p>
+              <p className="text-sm font-mono mt-1" style={successTextStyle()}>{rupiah(p.hargaJual)}</p>
             </div>
           ))}
         </div>
@@ -1244,7 +1239,7 @@ function KatalogScreen({ data }) {
                   <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{p.sku}</td>
                   <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
                   <td className="px-4 py-2" style={{ color: c.textDim }}>{p.kategori}</td>
-                  <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(p.hargaJual)}</td>
+                  <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(p.hargaJual)}</td>
                 </tr>
               ))}
             </tbody>
@@ -2177,7 +2172,7 @@ function LaporanScreen({ data }) {
       <div className="grid grid-cols-4 gap-3">
         <div className="col-span-2 rounded-xl p-5" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, boxShadow: `0 4px 20px -6px ${c.success}33` }}>
           <p className="text-xs mb-1.5" style={{ color: c.textDim }}>Omzet</p>
-          <p className="text-3xl font-mono font-bold" style={{ color: c.success }}>{rupiah(omzet)}</p>
+          <p className="text-3xl font-mono font-bold" style={successTextStyle()}>{rupiah(omzet)}</p>
         </div>
         {[
           { label: "Laba Kotor", value: rupiah(labaKotor), color: c.success },
@@ -2237,7 +2232,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.total)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2285,7 +2280,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.laba)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.laba)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2328,7 +2323,7 @@ function LaporanScreen({ data }) {
                     <td className="px-4 py-2" style={{ color: c.text }}>{r.nama}</td>
                     <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
                     <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.success }}>{rupiah(r.omzet)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.omzet)}</td>
                     <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
                   </tr>
                 ))}
