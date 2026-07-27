@@ -1,13 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@keyframes aurora-spin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.15); }
-  100% { transform: rotate(360deg) scale(1); }
+@keyframes anim-aurora {
+  0%   { transform: rotate(0deg)   translate(0%, 0%)     scale(1);    }
+  20%  { transform: rotate(80deg)  translate(3%, -4%)    scale(1.08); }
+  40%  { transform: rotate(160deg) translate(-4%, 2%)    scale(0.95); }
+  60%  { transform: rotate(220deg) translate(2%, 4%)     scale(1.05); }
+  80%  { transform: rotate(300deg) translate(-3%, -2%)   scale(0.98); }
+  100% { transform: rotate(360deg) translate(0%, 0%)     scale(1);    }
 }
 .anim-aurora {
-  animation: aurora-spin 40s linear infinite;
+  animation: anim-aurora 26s ease-in-out infinite;
 }
 html, body, #root {
   height: 100%;
