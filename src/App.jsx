@@ -962,6 +962,8 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   const [cartBump, setCartBump] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef(null);
+  const receiptRef = useRef(null);
+useFocusTrap(!!receipt, receiptRef);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -1388,8 +1390,6 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       {receipt && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div ref={receiptRef} className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
-            const receiptRef = useRef(null);
-useFocusTrap(!!receipt, receiptRef);
             <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
               <p className="text-center font-semibold receipt-title" style={{ textTransform: "uppercase" }}>{STORE_NAME}</p>
               <div className="my-1" style={{ borderTop: "1px dashed #999" }} />
