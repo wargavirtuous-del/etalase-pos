@@ -759,7 +759,7 @@ function Nav({ tab, setTab }) {
               {it.label}
             </button>
             <div
-              className="absolute left-0 top-full mt-1 w-56 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+              className="absolute left-0 top-full mt-1 w-56 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-opacity z-50"
               style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
             >
               {it.desc}
