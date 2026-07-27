@@ -75,7 +75,7 @@ const GLASS_THEMES = {
   monochrome: {
     label: "Monochrome Glass",
     gradient: "linear-gradient(160deg, #111827 0%, #374151 55%, #6B7280 100%)",
-    blobs: ["rgba(55,65,81,0.45)", "rgba(107,114,128,0.30)", "rgba(147,197,253,0.18)"],
+    blobs: ["rgba(55,65,81,0.90)", "rgba(107,114,128,0.60)", "rgba(147,197,253,0.40)"],
     accent: "#93C5FD",
     ctaGradient: "linear-gradient(135deg, #60A5FA, #2563EB)",
     tabTint: { kasir: "rgba(147,197,253,0.14)", katalog: "rgba(147,197,253,0.08)", gudang: "rgba(107,114,128,0.16)", opname: "rgba(107,114,128,0.10)", laporan: "rgba(209,213,219,0.10)" },
@@ -93,7 +93,7 @@ function getGlassPalette(themeKey) {
     textDim: "rgba(255,255,255,0.78)",
     textFaint: "rgba(255,255,255,0.55)",
     mint: t.accent,
-    mintDim: "rgba(255,255,255,0.18)",
+    mintDim: "rgba(255,255,255,0.20)",
     success: "#4ADE80",
     amber: "#F59E0B",
     amberDim: "rgba(245,158,11,0.20)",
