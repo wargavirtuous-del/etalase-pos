@@ -633,29 +633,37 @@ function LoginGate({ onLogin, accounts }) {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center font-sans" style={{ backgroundColor: c.bg }}>
-      <div className="w-80 rounded-2xl p-6" style={cardStyle()}>
-        <p className="text-lg font-semibold tracking-tight text-center mb-1" style={{ color: c.text }}>Aspho Cash</p>
-        <p className="text-xs text-center mb-5" style={{ color: c.textDim }}>Masuk untuk melanjutkan</p>
+    <div className="login-shell w-full min-h-screen flex items-center justify-center font-sans relative overflow-hidden">
+      <div className="login-aurora login-aurora-1" />
+      <div className="login-aurora login-aurora-2" />
+      <div className="login-aurora login-aurora-3" />
+
+      <div className="login-card w-80 rounded-3xl p-7 relative z-10">
+        <div className="flex flex-col items-center mb-6">
+          <div className="login-logo mb-4">
+            <ShoppingCart size={28} color="#0B1210" />
+          </div>
+          <p className="text-xl font-bold tracking-tight text-white">Aspho Cash</p>
+          <p className="text-xs text-center mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>Masuk untuk melanjutkan</p>
+        </div>
 
         {!mode ? (
-          <div className="space-y-2">
-            <button onClick={() => setMode("admin")} className="w-full py-3 rounded-lg text-sm font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+          <div className="space-y-2.5">
+            <button onClick={() => setMode("admin")} className="login-btn-primary w-full py-3 rounded-xl text-sm font-semibold">
               Masuk sebagai Admin
             </button>
-            <button onClick={() => setMode("kasir")} className="w-full py-3 rounded-lg text-sm font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
+            <button onClick={() => setMode("kasir")} className="login-btn-secondary w-full py-3 rounded-xl text-sm font-medium">
               Masuk sebagai Kasir
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <p className="text-xs mb-2 capitalize" style={{ color: c.textDim }}>Login {mode}</p>
+          <div className="space-y-2.5">
+            <p className="text-xs mb-1 capitalize" style={{ color: "rgba(255,255,255,0.65)" }}>Login {mode}</p>
             <input
               value={id}
               onChange={(e) => { setId(e.target.value); setError(""); }}
               placeholder="ID"
-              className="w-full text-sm bg-transparent outline-none px-3 py-2 rounded-lg"
-              style={{ border: `1px solid ${c.border}`, color: c.text }}
+              className="login-input w-full text-sm outline-none px-3 py-2.5 rounded-xl"
             />
             <input
               value={password}
@@ -663,28 +671,26 @@ function LoginGate({ onLogin, accounts }) {
               onKeyDown={(e) => e.key === "Enter" && submit()}
               type="password"
               placeholder="Password"
-              className="w-full text-sm bg-transparent outline-none px-3 py-2 rounded-lg"
-              style={{ border: `1px solid ${c.border}`, color: c.text }}
+              className="login-input w-full text-sm outline-none px-3 py-2.5 rounded-xl"
             />
-            {error && <p className="text-xs" style={{ color: c.coral }}>{error}</p>}
+            {error && <p className="text-xs" style={{ color: "#FCA5A5" }}>{error}</p>}
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { setMode(null); setId(""); setPassword(""); setError(""); }}
-                className="flex-1 py-2 rounded-lg text-xs"
-                style={{ backgroundColor: c.surfaceAlt, color: c.text }}
+                className="login-btn-secondary flex-1 py-2.5 rounded-xl text-xs"
               >
                 Kembali
               </button>
-              <button onClick={submit} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+              <button onClick={submit} className="login-btn-primary flex-1 py-2.5 rounded-xl text-xs font-semibold">
                 Masuk
               </button>
             </div>
-            <a
+            
               href={`https://wa.me/62${STORE_PHONE.replace(/\D/g, "").replace(/^0/, "")}?text=${encodeURIComponent(`Halo, saya lupa password akun ${mode} dengan ID: ${id || "(isi ID kamu)"}. Mohon bantuan reset password.`)}`}
               target="_blank"
               rel="noreferrer"
               className="block text-center text-[11px] mt-2 underline"
-              style={{ color: c.textDim }}
+              style={{ color: "rgba(255,255,255,0.55)" }}
             >
               Lupa password? Hubungi toko via WhatsApp
             </a>
