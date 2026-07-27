@@ -102,12 +102,131 @@ function getGlassPalette(themeKey) {
   };
 }
 
+// ---- 3 tema baru (Corporate Flat, Liquid Glass Terang, Arctic Blue) ----
+// Sesuai spesifikasi "ASPHO CASH — 3 TEMA FINAL": struktur/layout tidak berubah,
+// radius/spacing/blur adalah pembeda identitas tiap tema. Indikator hijau/kuning/merah tetap sama persis.
+const LIGHT_THEME_META = {
+  corporate: {
+    label: "Corporate Flat",
+    pageGradient: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 55%, #EEEEEE 100%)",
+    blobs: [],
+    blur: 0,
+    radius: 9,
+    cardBg: "#FFFFFF",
+    cardBorder: "#E2E4E8",
+    cardShadow: "0 1px 3px rgba(0,0,0,.06)",
+    navActiveBg: "#EFF6FF",
+    navActiveBorder: "#BFDBFE",
+    accent: "#2563EB",
+    accentDim: "rgba(37,99,235,0.10)",
+    danggerBg: "#FEF2F2",
+    danggerBorder: "#FCA5A5",
+  },
+  glasslight: {
+    label: "Liquid Glass (Terang)",
+    pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F8FAFC 55%, #EEF8FF 100%)",
+    blobs: [
+      { color: "#60A5FA", size: 380, blur: 70, top: -110, left: -90 },
+      { color: "#A78BFA", size: 320, blur: 70, top: -60, right: -100 },
+      { color: "#67E8F9", size: 300, blur: 70, top: 20, left: "38%" },
+    ],
+    blur: 28,
+    radius: 22,
+    cardBg: "rgba(255,255,255,0.42)",
+    cardBorder: "rgba(255,255,255,0.9)",
+    cardShadow: "0 12px 40px rgba(15,23,42,.10)",
+    navDefaultBg: "rgba(255,255,255,0.30)",
+    navDefaultBorder: "rgba(255,255,255,0.75)",
+    navActiveBg: "rgba(255,255,255,0.65)",
+    navActiveBorder: "rgba(37,99,235,0.4)",
+    accent: "#2563EB",
+    accentDim: "rgba(37,99,235,0.10)",
+  },
+  arctic: {
+    label: "Arctic Blue",
+    pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F0F9FF 55%, #DBEAFE 100%)",
+    blobs: [
+      { color: "#60A5FA", size: 420, blur: 80, opacity: 0.45, top: -110, left: -90 },
+      { color: "#60A5FA", size: 360, blur: 80, opacity: 0.45, top: -50, right: -110 },
+    ],
+    blur: 24,
+    radius: 20,
+    cardBg: "rgba(255,255,255,0.60)",
+    cardBorder: "rgba(255,255,255,0.9)",
+    cardShadow: "0 8px 24px rgba(29,78,216,.08)",
+    navDefaultBg: "rgba(255,255,255,0.40)",
+    navDefaultBorder: "rgba(255,255,255,0.75)",
+    navActiveBg: "rgba(255,255,255,0.85)",
+    navActiveBorder: "#93C5FD",
+    accent: "#1D4ED8",
+    accentDim: "rgba(29,78,216,0.10)",
+  },
+};
+const LIGHT_THEME_TEXT = {
+  corporate: { text: "#111827", textDim: "#374151", textFaint: "#6B7280" },
+  glasslight: { text: "#0F172A", textDim: "#374151", textFaint: "#64748B" },
+  arctic: { text: "#0F1E3C", textDim: "#33507A", textFaint: "#6B87AC" },
+};
+function getLightThemePalette(themeKey) {
+  const m = LIGHT_THEME_META[themeKey];
+  const t = LIGHT_THEME_TEXT[themeKey];
+  return {
+    bg: themeKey === "corporate" ? "#F5F5F5" : "#EEF8FF",
+    surface: m.cardBg,
+    surfaceAlt: themeKey === "corporate" ? "#F7F7F7" : "rgba(255,255,255,0.30)",
+    border: m.cardBorder,
+    text: t.text,
+    textDim: t.textDim,
+    textFaint: t.textFaint,
+    mint: m.accent,
+    mintDim: m.accentDim,
+    success: "#16A34A",
+    amber: "#F59E0B",
+    amberDim: "rgba(245,158,11,0.14)",
+    coral: "#DC2626",
+    coralDim: m.danggerBg || "rgba(220,38,38,0.10)",
+  };
+}
+
 let c = { ...darkPalette };
 let currentThemeMode = "dark";
 function applyTheme(mode, glassColorTheme) {
   currentThemeMode = mode;
-  const palette = mode === "light" ? lightPalette : mode === "glass" ? getGlassPalette(glassColorTheme) : darkPalette;
+  const palette =
+    mode === "light" ? lightPalette :
+    mode === "glass" ? getGlassPalette(glassColorTheme) :
+    LIGHT_THEME_META[mode] ? getLightThemePalette(mode) :
+    darkPalette;
   Object.assign(c, palette);
+}
+function themeMeta() {
+  return LIGHT_THEME_META[currentThemeMode] || null;
+}
+// Style kartu/panel bersama — dipakai supaya radius & efek kaca konsisten di 3 tema baru
+// tanpa perlu mengubah setiap className rounded-* satu per satu (inline style menang atas class).
+function cardStyle(extra = {}) {
+  const { ring, ...rest } = extra;
+  const m = themeMeta();
+  const base = !m
+    ? { backgroundColor: c.surface, border: `1px solid ${c.border}` }
+    : {
+        backgroundColor: c.surface,
+        border: `1px solid ${c.border}`,
+        borderRadius: m.radius,
+        boxShadow: m.cardShadow,
+        backdropFilter: m.blur ? `blur(${m.blur}px)` : undefined,
+        WebkitBackdropFilter: m.blur ? `blur(${m.blur}px)` : undefined,
+      };
+  if (ring) {
+    base.boxShadow = base.boxShadow ? `${base.boxShadow}, 0 0 0 2px ${c.mint}` : `0 0 0 2px ${c.mint}`;
+    base.border = `1px solid ${c.mint}`;
+  }
+  return { ...base, ...rest };
+}
+// Untuk pembungkus tabel (border saja, tanpa background) — radius tetap ikut tema.
+function tableWrapStyle() {
+  const m = themeMeta();
+  return { border: `1px solid ${c.border}`, borderRadius: m ? m.radius : undefined };
 }
 
 const STORAGE_KEY = "pos-data-v1";
@@ -380,22 +499,29 @@ function SettingsModal({ settings, update, onClose, currentUser, accounts, updat
   useModalKeys(true, null, onClose);
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-      <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+      <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={cardStyle()}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
           <button onClick={onClose}><X size={16} color={c.textDim} /></button>
         </div>
 
         <p className="text-xs mb-2" style={{ color: c.textDim }}>Tema Aplikasi</p>
-        <div className="flex gap-2 mb-4">
-          {[{ key: "dark", label: "Gelap" }, { key: "light", label: "Terang" }, { key: "glass", label: "Liquid Glass" }].map((t) => (
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {[
+            { key: "dark", label: "Gelap" },
+            { key: "light", label: "Terang" },
+            { key: "glass", label: "Liquid Glass (Gelap)" },
+            { key: "corporate", label: "Corporate Flat" },
+            { key: "glasslight", label: "Liquid Glass (Terang)" },
+            { key: "arctic", label: "Arctic Blue" },
+          ].map((t) => (
             <button
               key={t.key}
               onClick={() => update({ theme: t.key })}
-              className="flex-1 py-2 rounded-lg text-xs font-medium"
+              className="py-2 rounded-lg text-xs font-medium"
               style={{
                 backgroundColor: settings.theme === t.key ? c.mint : c.surfaceAlt,
-                color: settings.theme === t.key ? "#0B1210" : c.textDim,
+                color: settings.theme === t.key ? (LIGHT_THEME_META[t.key] ? "#fff" : "#0B1210") : c.textDim,
                 border: `1px solid ${c.border}`,
               }}
             >
@@ -501,7 +627,7 @@ function LoginGate({ onLogin, accounts }) {
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center font-sans" style={{ backgroundColor: c.bg }}>
-      <div className="w-80 rounded-2xl p-6" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+      <div className="w-80 rounded-2xl p-6" style={cardStyle()}>
         <p className="text-lg font-semibold tracking-tight text-center mb-1" style={{ color: c.text }}>Aspho Cash</p>
         <p className="text-xs text-center mb-5" style={{ color: c.textDim }}>Masuk untuk melanjutkan</p>
 
@@ -570,21 +696,51 @@ function Nav({ tab, setTab }) {
     { key: "opname", label: "Stok Opname", icon: ClipboardCheck, desc: "Cocokkan stok yang tercatat di sistem dengan stok fisik hasil hitung manual." },
     { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Ringkasan omzet, laba per kategori, dan riwayat transaksi per kasir." },
   ];
+  const btnRefs = useRef([]);
+  const m = themeMeta();
+
+  // Navigasi tab pakai panah kiri/kanan (pengganti mouse) — aktif saat fokus ada di salah satu tab.
+  const handleNavKey = (e, idx) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      const nextIdx = (idx + dir + items.length) % items.length;
+      setTab(items[nextIdx].key);
+      btnRefs.current[nextIdx]?.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setTab(items[idx].key);
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-1.5 px-5 pt-3 pb-2.5 border-b" style={{ borderColor: c.border }}>
-      {items.map((it) => {
+      {items.map((it, idx) => {
         const active = tab === it.key;
         const Icon = it.icon;
+        const glassNav = m && (m.navDefaultBg || m.navActiveBg);
+        const navStyle = glassNav
+          ? {
+              backgroundColor: active ? m.navActiveBg : (m.navDefaultBg || "transparent"),
+              color: active ? (m.accent || c.mint) : c.textDim,
+              border: `1px solid ${active ? m.navActiveBorder : (m.navDefaultBorder || "transparent")}`,
+              backdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+              WebkitBackdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+              borderRadius: Math.min(m.radius, 12),
+            }
+          : {
+              backgroundColor: active ? c.mintDim : "transparent",
+              color: active ? c.mint : c.textDim,
+              border: `1px solid ${active ? c.mint : "transparent"}`,
+            };
         return (
           <div key={it.key} className="relative group">
             <button
+              ref={(el) => (btnRefs.current[idx] = el)}
               onClick={() => setTab(it.key)}
+              onKeyDown={(e) => handleNavKey(e, idx)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: active ? c.mintDim : "transparent",
-                color: active ? c.mint : c.textDim,
-                border: `1px solid ${active ? c.mint : "transparent"}`,
-              }}
+              style={navStyle}
             >
               <Icon size={15} />
               {it.label}
@@ -679,6 +835,16 @@ function searchBarStyle() {
   if (currentThemeMode === "glass") {
     return { backgroundColor: "rgba(255,255,255,0.20)", border: "1px solid rgba(255,255,255,0.35)" };
   }
+  const m = themeMeta();
+  if (m) {
+    return {
+      backgroundColor: m.navDefaultBg || c.surfaceAlt,
+      border: `1px solid ${m.navDefaultBorder || c.border}`,
+      borderRadius: Math.min(m.radius, 12),
+      backdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+      WebkitBackdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+    };
+  }
   return { backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` };
 }
 
@@ -688,6 +854,8 @@ function ctaStyle(enabled, glassColorTheme) {
     const t = GLASS_THEMES[glassColorTheme] || GLASS_THEMES.aurora;
     return { background: t.ctaGradient, color: "#fff", boxShadow: "0 4px 16px -2px rgba(0,0,0,0.35)" };
   }
+  const m = themeMeta();
+  if (m) return { backgroundColor: c.mint, color: "#fff", borderRadius: Math.min(m.radius, 10) };
   return { backgroundColor: c.mint, color: "#0B1210" };
 }
 
@@ -715,6 +883,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   const [receipt, setReceipt] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [cartBump, setCartBump] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -728,6 +897,27 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       p.barcode.includes(query) ||
       p.sku.toLowerCase().includes(query.toLowerCase())
   );
+
+  useEffect(() => { setHighlight(0); }, [query]);
+
+  // Navigasi hasil pencarian pakai panah atas/bawah, pilih dengan Enter.
+  const handleSearchKeyDown = (e) => {
+    if (!filtered.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((i) => Math.min(i + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      const target = filtered[highlight];
+      if (target && target.etalase > 0) {
+        e.preventDefault();
+        addToCart(target);
+        setQuery("");
+      }
+    }
+  };
 
   const addToCart = (p) => {
     if (p.etalase <= 0) return;
@@ -1033,23 +1223,26 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama, scan barcode, atau ketik SKU lalu Enter..."
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Cari nama, scan barcode, atau ketik SKU, lalu ↑↓ + Enter untuk pilih..."
             className="bg-transparent outline-none text-sm w-full"
             style={{ color: c.text }}
           />
         </div>
         <div className="grid grid-cols-1 gap-2 overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
           {displayMode === "text" && (
-            <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
-              {filtered.map((p) => {
+            <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
+              {filtered.map((p, idx) => {
                 const habis = p.etalase <= 0;
+                const isHi = idx === highlight;
                 return (
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
+                    onMouseEnter={() => setHighlight(idx)}
                     disabled={habis}
                     className="w-full flex items-center justify-between px-4 py-2.5 text-left"
-                    style={{ backgroundColor: c.surface, borderBottom: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
+                    style={{ backgroundColor: isHi ? c.mintDim : c.surface, borderBottom: `1px solid ${c.border}`, boxShadow: isHi ? `inset 0 0 0 1px ${c.mint}` : "none", opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
                   >
                     <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
                     <div className="flex items-center gap-4">
@@ -1061,15 +1254,17 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
               })}
             </div>
           )}
-          {displayMode !== "text" && filtered.map((p) => {
+          {displayMode !== "text" && filtered.map((p, idx) => {
             const habis = p.etalase <= 0;
+            const isHi = idx === highlight;
             return (
               <button
                 key={p.id}
                 onClick={() => addToCart(p)}
+                onMouseEnter={() => setHighlight(idx)}
                 disabled={habis}
                 className="text-left p-3 rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3"
-                style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
+                style={cardStyle({ opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer", ring: isHi })}
               >
                 <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
                   {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={18} color={c.textDim} />}
@@ -1087,7 +1282,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 
       {voidConfirm && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <div className="w-72 rounded-xl p-4" style={cardStyle()}>
             <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Batalkan transaksi ini?</p>
             <p className="text-xs mb-3" style={{ color: c.textDim }}>Item di keranjang akan dihapus dan tidak tersimpan.</p>
             <div className="flex gap-2">
@@ -1159,7 +1354,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 
       {cancelReceiptConfirm && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <div className="w-72 rounded-xl p-4" style={cardStyle()}>
             <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Batalkan transaksi {receipt?.id}?</p>
             <p className="text-xs mb-3" style={{ color: c.textDim }}>Stok akan dikembalikan dan transaksi dihapus dari riwayat & laporan. Tindakan ini tercatat di log audit.</p>
             <div className="flex gap-2">
@@ -1177,10 +1372,34 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 function KatalogScreen({ data }) {
   const [mode, setMode] = useState("visual");
   const [search, setSearch] = useState("");
+  const [highlight, setHighlight] = useState(0);
 
   const filtered = data.products.filter((p) =>
     (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase())
   );
+
+  useEffect(() => { setHighlight(0); }, [search, mode]);
+
+  // Katalog cuma menampilkan info (tidak ada aksi klik/pilih), jadi panah+Enter di sini
+  // berfungsi menyorot & menggulir ke barang yang dituju — pengganti mouse untuk menelusuri daftar.
+  const cols = mode === "visual" ? 4 : 1;
+  const handleKatalogKeyDown = (e) => {
+    if (!filtered.length) return;
+    let delta = null;
+    if (e.key === "ArrowRight") delta = 1;
+    else if (e.key === "ArrowLeft") delta = -1;
+    else if (e.key === "ArrowDown") delta = cols;
+    else if (e.key === "ArrowUp") delta = -cols;
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      document.getElementById(`katalog-item-${highlight}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    if (delta !== null) {
+      e.preventDefault();
+      setHighlight((i) => Math.min(Math.max(i + delta, 0), filtered.length - 1));
+    }
+  };
 
   return (
     <div className="p-5">
@@ -1196,7 +1415,8 @@ function KatalogScreen({ data }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, SKU, barcode, atau kategori..."
+            onKeyDown={handleKatalogKeyDown}
+            placeholder="Cari nama, SKU, barcode, atau kategori... (↑↓←→ sorot, Enter gulir ke situ)"
             className="bg-transparent outline-none text-sm w-full"
             style={{ color: c.text }}
           />
@@ -1208,8 +1428,8 @@ function KatalogScreen({ data }) {
           {filtered.length === 0 && (
             <p className="col-span-4 text-center text-xs py-6" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</p>
           )}
-          {filtered.map((p) => (
-            <div key={p.id} className="rounded-xl p-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          {filtered.map((p, idx) => (
+            <div id={`katalog-item-${idx}`} key={p.id} className="rounded-xl p-3" style={cardStyle({ ring: idx === highlight })}>
               <div className="w-full h-20 rounded-lg flex items-center justify-center mb-2 overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
                 {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={26} color={c.textDim} />}
               </div>
@@ -1220,7 +1440,7 @@ function KatalogScreen({ data }) {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+        <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -1234,8 +1454,8 @@ function KatalogScreen({ data }) {
               {filtered.length === 0 && (
                 <tr><td colSpan={4} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
               )}
-              {filtered.map((p) => (
-                <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+              {filtered.map((p, idx) => (
+                <tr id={`katalog-item-${idx}`} key={p.id} style={{ backgroundColor: idx === highlight ? c.mintDim : c.surface, borderTop: `1px solid ${c.border}`, boxShadow: idx === highlight ? `inset 0 0 0 1px ${c.mint}` : "none" }}>
                   <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{p.sku}</td>
                   <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
                   <td className="px-4 py-2" style={{ color: c.textDim }}>{p.kategori}</td>
@@ -1262,6 +1482,7 @@ function GudangScreen({ data, persist, role }) {
   const [selected, setSelected] = useState([]);
   const [bulkPrint, setBulkPrint] = useState(false);
   const [search, setSearch] = useState("");
+  const [highlightRow, setHighlightRow] = useState(0);
   const addFormRef = useRef(null);
 
   const handleEnterNext = (e) => {
@@ -1281,6 +1502,26 @@ function GudangScreen({ data, persist, role }) {
   const filteredProducts = data.products.filter((p) =>
     (p.nama + p.sku + p.barcode + p.kategori).toLowerCase().includes(search.toLowerCase())
   );
+
+  useEffect(() => { setHighlightRow(0); }, [search]);
+
+  // Panah atas/bawah pindah baris, Enter untuk memilih (centang) barang yang di-highlight.
+  const handleSearchListKeyDown = (e) => {
+    if (!filteredProducts.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightRow((i) => Math.min(i + 1, filteredProducts.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightRow((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      const target = filteredProducts[highlightRow];
+      if (target) {
+        e.preventDefault();
+        toggleSelect(target.id);
+      }
+    }
+  };
 
   const toggleSelect = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -1494,7 +1735,8 @@ function GudangScreen({ data, persist, role }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, SKU, barcode, atau kategori..."
+            onKeyDown={handleSearchListKeyDown}
+            placeholder="Cari nama, SKU, barcode, atau kategori... (↑↓ pilih, Enter centang)"
             className="bg-transparent outline-none text-sm w-full"
             style={{ color: c.text }}
           />
@@ -1517,7 +1759,7 @@ function GudangScreen({ data, persist, role }) {
             {copyMsg && <p className="text-[11px] mt-1.5" style={{ color: c.mint }}>{copyMsg}</p>}
           </div>
         )}
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+        <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -1537,8 +1779,12 @@ function GudangScreen({ data, persist, role }) {
               {filteredProducts.length === 0 && (
                 <tr><td colSpan={isAdmin ? 8 : 7} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</td></tr>
               )}
-              {filteredProducts.map((p) => (
-                <tr key={p.id} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+              {filteredProducts.map((p, idx) => (
+                <tr
+                  key={p.id}
+                  onMouseEnter={() => setHighlightRow(idx)}
+                  style={{ backgroundColor: idx === highlightRow ? c.mintDim : c.surface, borderTop: `1px solid ${c.border}`, boxShadow: idx === highlightRow ? `inset 0 0 0 1px ${c.mint}` : "none" }}
+                >
                   <td className="px-3 py-2 text-center">
                     <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} />
                   </td>
@@ -1588,7 +1834,7 @@ function GudangScreen({ data, persist, role }) {
       </div>
 
       {isAdmin ? (
-        <div className="w-72 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+        <div className="w-72 rounded-xl p-4" style={cardStyle()}>
           <p className="text-sm font-semibold mb-3" style={{ color: c.text }}>Tambah Barang Baru</p>
           <div className="space-y-2" ref={addFormRef}>
             {[
@@ -1640,7 +1886,7 @@ function GudangScreen({ data, persist, role }) {
           </div>
         </div>
       ) : (
-        <div className="w-72 rounded-xl p-4 flex items-start gap-2" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+        <div className="w-72 rounded-xl p-4 flex items-start gap-2" style={cardStyle()}>
           <AlertTriangle size={14} color={c.amber} className="mt-0.5 shrink-0" />
           <p className="text-xs" style={{ color: c.textDim }}>
             Login sebagai <b style={{ color: c.text }}>kasir</b> — hanya bisa transfer stok. Tambah barang baru dan ubah harga hanya bisa dilakukan admin.
@@ -1650,7 +1896,7 @@ function GudangScreen({ data, persist, role }) {
 
       {editing && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4 w-80" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <div className="rounded-xl p-4 w-80" style={cardStyle()}>
             <p className="text-sm font-semibold mb-3" style={{ color: c.text }}>Edit Barang</p>
             <div className="space-y-2">
               <input value={editing.nama} onChange={(e) => setEditing((prev) => ({ ...prev, nama: e.target.value }))} placeholder="Nama barang" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
@@ -1683,7 +1929,7 @@ function GudangScreen({ data, persist, role }) {
 
       {deleteConfirm && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4 w-72" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <div className="rounded-xl p-4 w-72" style={cardStyle()}>
             <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Hapus "{deleteConfirm.nama}"?</p>
             <p className="text-xs mb-3" style={{ color: c.textDim }}>Barang akan hilang dari katalog, gudang, dan etalase. Riwayat transaksi lama tidak terpengaruh.</p>
             <div className="flex gap-2">
@@ -1800,7 +2046,7 @@ function OpnameScreen({ data, persist }) {
 
       {saved && <p className="mb-3 text-xs" style={{ color: c.mint }}>Tersimpan. Selisih otomatis dicatat ke log audit stok.</p>}
 
-      <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+      <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
         <table className="w-full text-sm">
           <thead>
             <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -1937,7 +2183,7 @@ function ProductAnalysis({ data }) {
   const sedikit = top(list, "qty", "asc");
 
   const MiniTable = ({ title, rows, valueKey, valueLabel }) => (
-    <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+    <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
       <div className="px-3 py-2" style={{ backgroundColor: c.surfaceAlt }}>
         <p className="text-xs font-semibold" style={{ color: c.text }}>{title}</p>
       </div>
@@ -2081,12 +2327,14 @@ function ReportModal({ title, onClose, children }) {
   );
 }
 
-function ReportCard({ icon: Icon, title, desc, onClick }) {
+function ReportCard({ icon: Icon, title, desc, onClick, cardRef, onKeyDown }) {
   return (
     <button
+      ref={cardRef}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       className="text-left p-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95"
-      style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}
+      style={cardStyle()}
     >
       <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: c.mintDim }}>
         <Icon size={16} color={c.mint} />
@@ -2124,6 +2372,20 @@ function LaporanScreen({ data }) {
   const fmtWaktu = (w) => new Date(w).toLocaleString("id-ID");
 
   const [openReport, setOpenReport] = useState(null);
+  const reportKeys = ["nota", "analisis", "laba", "riwayat"];
+  const reportRefs = useRef([]);
+  // Panah kiri/kanan/atas/bawah untuk pindah antar kartu laporan (pengganti mouse), Enter membuka kartu yang fokus.
+  const handleReportCardKey = (e, idx) => {
+    let nextIdx = null;
+    if (e.key === "ArrowRight") nextIdx = (idx + 1) % reportKeys.length;
+    else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + reportKeys.length) % reportKeys.length;
+    else if (e.key === "ArrowDown") nextIdx = (idx + 2) % reportKeys.length;
+    else if (e.key === "ArrowUp") nextIdx = (idx - 2 + reportKeys.length) % reportKeys.length;
+    if (nextIdx !== null) {
+      e.preventDefault();
+      reportRefs.current[nextIdx]?.focus();
+    }
+  };
   const [searchLaba, setSearchLaba] = useState("");
   const [searchRiwayat, setSearchRiwayat] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
@@ -2170,7 +2432,7 @@ function LaporanScreen({ data }) {
   return (
     <div className="p-5 space-y-5">
       <div className="grid grid-cols-4 gap-3">
-        <div className="col-span-2 rounded-xl p-5" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}`, boxShadow: `0 4px 20px -6px ${c.success}33` }}>
+        <div className="col-span-2 rounded-xl p-5" style={cardStyle({ boxShadow: `0 4px 20px -6px ${c.success}33` })}>
           <p className="text-xs mb-1.5" style={{ color: c.textDim }}>Omzet</p>
           <p className="text-3xl font-mono font-bold" style={successTextStyle()}>{rupiah(omzet)}</p>
         </div>
@@ -2178,12 +2440,12 @@ function LaporanScreen({ data }) {
           { label: "Laba Kotor", value: rupiah(labaKotor), color: c.success },
           { label: "Jumlah Transaksi", value: jumlahTrx, color: c.text },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+          <div key={s.label} className="rounded-xl p-4" style={cardStyle()}>
             <p className="text-[11px] mb-1" style={{ color: c.textDim }}>{s.label}</p>
             <p className="text-lg font-mono font-semibold" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
-        <div className="col-span-4 rounded-xl p-4" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+        <div className="col-span-4 rounded-xl p-4" style={cardStyle()}>
           <p className="text-[11px] mb-1" style={{ color: c.textDim }}>Balance Stok vs Transaksi</p>
           <p className="text-lg font-mono font-semibold" style={{ color: balance ? c.success : c.coral }}>{balance ? "Cocok ✓" : "Selisih!"}</p>
         </div>
@@ -2192,10 +2454,10 @@ function LaporanScreen({ data }) {
       <div>
         <p className="text-sm font-semibold mb-2" style={{ color: c.text }}>Pilih Laporan</p>
         <div className="grid grid-cols-2 gap-3">
-          <ReportCard icon={FileText} title="Riwayat Transaksi (per Nota)" desc="Satu baris per transaksi — invoice, kasir, jumlah item, total" onClick={() => setOpenReport("nota")} />
-          <ReportCard icon={TrendingUp} title="Analisis Produk" desc="Barang tercepat/terlambat terjual, terbanyak/tersedikit terbeli" onClick={() => setOpenReport("analisis")} />
-          <ReportCard icon={BarChart3} title="Laba per Kategori" desc="Rincian omzet & laba kotor per kategori barang" onClick={() => setOpenReport("laba")} />
-          <ReportCard icon={List} title="Riwayat Transaksi (per Kasir)" desc="Satu baris per barang terjual, lengkap dengan nama kasir" onClick={() => setOpenReport("riwayat")} />
+          <ReportCard icon={FileText} title="Riwayat Transaksi (per Nota)" desc="Satu baris per transaksi — invoice, kasir, jumlah item, total" onClick={() => setOpenReport("nota")} cardRef={(el) => (reportRefs.current[0] = el)} onKeyDown={(e) => handleReportCardKey(e, 0)} />
+          <ReportCard icon={TrendingUp} title="Analisis Produk" desc="Barang tercepat/terlambat terjual, terbanyak/tersedikit terbeli" onClick={() => setOpenReport("analisis")} cardRef={(el) => (reportRefs.current[1] = el)} onKeyDown={(e) => handleReportCardKey(e, 1)} />
+          <ReportCard icon={BarChart3} title="Laba per Kategori" desc="Rincian omzet & laba kotor per kategori barang" onClick={() => setOpenReport("laba")} cardRef={(el) => (reportRefs.current[2] = el)} onKeyDown={(e) => handleReportCardKey(e, 2)} />
+          <ReportCard icon={List} title="Riwayat Transaksi (per Kasir)" desc="Satu baris per barang terjual, lengkap dengan nama kasir" onClick={() => setOpenReport("riwayat")} cardRef={(el) => (reportRefs.current[3] = el)} onKeyDown={(e) => handleReportCardKey(e, 3)} />
         </div>
       </div>
 
@@ -2209,7 +2471,7 @@ function LaporanScreen({ data }) {
             </div>
             <CopyButton getText={trxTextForCopy} />
           </div>
-          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+          <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -2257,7 +2519,7 @@ function LaporanScreen({ data }) {
             </div>
             <CopyButton getText={labaTextForCopy} />
           </div>
-          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+          <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -2299,7 +2561,7 @@ function LaporanScreen({ data }) {
             </div>
             <CopyButton getText={riwayatTextForCopy} />
           </div>
-          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+          <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
@@ -2362,6 +2624,7 @@ export default function App() {
 
   const isGlass = settings.theme === "glass";
   const glassTheme = GLASS_THEMES[settings.glassColorTheme] || GLASS_THEMES.aurora;
+  const lightMeta = LIGHT_THEME_META[settings.theme] || null;
 
   return (
     <div
@@ -2369,6 +2632,7 @@ export default function App() {
       style={{
         backgroundColor: c.bg,
         ...(isGlass ? { background: glassTheme.gradient, "--glass-blur": `${settings.glassBlur}px` } : {}),
+        ...(lightMeta ? { background: lightMeta.pageGradient } : {}),
       }}
     >
       {isGlass && (
@@ -2380,6 +2644,27 @@ export default function App() {
             className="absolute inset-0"
             style={{ backgroundColor: glassTheme.tabTint?.[tab] || "transparent", transition: "background-color 300ms ease" }}
           />
+        </div>
+      )}
+      {lightMeta && lightMeta.blobs.length > 0 && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          {lightMeta.blobs.map((b, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                width: b.size,
+                height: b.size,
+                top: b.top,
+                left: b.left,
+                right: b.right,
+                bottom: b.bottom,
+                background: b.color,
+                opacity: b.opacity ?? 1,
+                filter: `blur(${b.blur}px)`,
+              }}
+            />
+          ))}
         </div>
       )}
       <div className="px-5 pt-3 pb-1 flex items-center justify-between">
