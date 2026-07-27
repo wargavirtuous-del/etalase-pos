@@ -101,16 +101,25 @@ html, body, #root {
   animation: login-drift-3 24s ease-in-out infinite;
 }
 @keyframes login-drift-1 {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  50% { transform: translate(40px,30px) scale(1.1); }
+  0%   { transform: translate(0px, 0px) scale(1); }
+  25%  { transform: translate(45px, -35px) scale(1.12); }
+  50%  { transform: translate(20px, 40px) scale(0.92); }
+  75%  { transform: translate(-40px, 15px) scale(1.05); }
+  100% { transform: translate(0px, 0px) scale(1); }
 }
 @keyframes login-drift-2 {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  50% { transform: translate(-30px,20px) scale(0.95); }
+  0%   { transform: translate(0px, 0px) scale(1); }
+  30%  { transform: translate(-35px, 25px) scale(0.9); }
+  55%  { transform: translate(30px, 35px) scale(1.1); }
+  80%  { transform: translate(15px, -30px) scale(0.97); }
+  100% { transform: translate(0px, 0px) scale(1); }
 }
 @keyframes login-drift-3 {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  50% { transform: translate(25px,-25px) scale(1.05); }
+  0%   { transform: translate(0px, 0px) scale(1); }
+  20%  { transform: translate(30px, -20px) scale(1.08); }
+  45%  { transform: translate(-25px, -35px) scale(0.94); }
+  70%  { transform: translate(-35px, 20px) scale(1.05); }
+  100% { transform: translate(0px, 0px) scale(1); }
 }
 .login-card {
   background: rgba(255,255,255,0.08);
@@ -143,6 +152,6 @@ html, body, #root {
   color: #fff;
   transition: background 0.15s ease;
 }
-.anim-drift-1 { animation: login-drift-1 22s ease-in-out infinite; }
-.anim-drift-2 { animation: login-drift-2 26s ease-in-out infinite; }
-.anim-drift-3 { animation: login-drift-3 30s ease-in-out infinite; }
+.anim-drift-1 { animation: login-drift-1 15s ease-in-out infinite; }
+.anim-drift-2 { animation: login-drift-2 20s ease-in-out infinite; }
+.anim-drift-3 { animation: login-drift-3 25s ease-in-out infinite; }
