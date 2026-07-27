@@ -124,8 +124,12 @@ const LIGHT_THEME_META = {
   },
   glasslight: {
     label: "Liquid Glass (Terang)",
-    pageGradient: "linear-gradient(160deg, #FAFBFC 0%, #F4F6F8 100%)",
-    blobs: [],
+   pageGradient: "linear-gradient(160deg, #FAFBFC 0%, #F4F6F8 100%)",
+    blobs: [
+      { color: "#93C5FD", size: 520, blur: 130, opacity: 0.16, top: -160, left: -140 },
+      { color: "#C4B5FD", size: 460, blur: 130, opacity: 0.14, top: -80, right: -160 },
+      { color: "#7DD3FC", size: 420, blur: 130, opacity: 0.12, bottom: -180, left: "30%" },
+    ],
     blur: 28,
     radius: 22,
     cardBg: "rgba(255,255,255,0.85)",
@@ -143,7 +147,11 @@ const LIGHT_THEME_META = {
   arctic: {
     label: "Arctic Blue",
     pageGradient: "linear-gradient(160deg, #F7FAFD 0%, #EEF4FA 100%)",
-    blobs: [],
+    blobs: [
+      { color: "#7DD3FC", size: 560, blur: 140, opacity: 0.14, top: -170, left: -150 },
+      { color: "#93C5FD", size: 480, blur: 140, opacity: 0.12, top: -60, right: -170 },
+      { color: "#BAE6FD", size: 440, blur: 140, opacity: 0.10, bottom: -190, left: "35%" },
+    ],
     blur: 24,
     radius: 20,
     cardBg: "rgba(255,255,255,0.88)",
