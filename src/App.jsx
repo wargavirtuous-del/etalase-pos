@@ -1442,6 +1442,9 @@ useFocusTrap(!!receipt, receiptRef);
     onConfirm={batalkanTransaksiSelesai}
   />
 )}
+    </div>
+    );
+}
 
 // ---------------- KATALOG ----------------
 function KatalogScreen({ data }) {
