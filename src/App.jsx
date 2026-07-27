@@ -674,7 +674,7 @@ function LoginGate({ onLogin, accounts }) {
               className="login-input w-full text-sm outline-none px-3 py-2.5 rounded-xl"
             />
             {error && <p className="text-xs" style={{ color: "#FCA5A5" }}>{error}</p>}
-            <div className="flex gap-2 pt-1">
+           <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { setMode(null); setId(""); setPassword(""); setError(""); }}
                 className="login-btn-secondary flex-1 py-2.5 rounded-xl text-xs"
