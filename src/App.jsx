@@ -2656,11 +2656,11 @@ export default function App() {
         ...(lightMeta ? { background: lightMeta.pageGradient } : {}),
       }}
     >
-      {isGlass && (
+   {isGlass && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="absolute rounded-full" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
-          <div className="absolute rounded-full" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
-          <div className="absolute rounded-full" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
+          <div className="absolute rounded-full anim-drift-1" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
+          <div className="absolute rounded-full anim-drift-2" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
+          <div className="absolute rounded-full anim-drift-3" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
           <div
             className="absolute inset-0"
             style={{ backgroundColor: glassTheme.tabTint?.[tab] || "transparent", transition: "background-color 300ms ease" }}
