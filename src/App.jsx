@@ -2391,8 +2391,17 @@ function ReportModal({ title, onClose, children }) {
   useModalKeys(true, null, onClose);
   useFocusTrap(true, containerRef);
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
-      <div className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl p-5" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+      onClick={onClose}
+    >
+      <div
+        ref={containerRef}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl p-5"
+        style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}
+      >
         <div className="flex items-center justify-between mb-4">
           <p className="text-base font-semibold" style={{ color: c.text }}>{title}</p>
           <button onClick={onClose} className="p-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }} aria-label="Tutup laporan"><X size={16} color={c.textDim} /></button>
@@ -2421,6 +2430,82 @@ function ReportCard({ icon: Icon, title, desc, onClick, cardRef, onKeyDown }) {
   );
 }
 
+function InvoiceDetailModal({ trx, onClose }) {
+  const containerRef = useRef(null);
+  useModalKeys(true, null, onClose);
+  useFocusTrap(true, containerRef);
+
+  const textForCopy = () => {
+    const header = `Invoice: ${trx.id}\nWaktu: ${new Date(trx.tanggal).toLocaleString("id-ID")}\nKasir: ${trx.kasir || "-"}`;
+    const items = trx.items.map((it) => `${it.nama} x${it.qty} - ${rupiah(it.harga * it.qty)}`).join("\n");
+    const payments = trx.payments.map((p) => `${p.metode}: ${rupiah(p.jumlah)}`).join("\n");
+    const footer = `Total: ${rupiah(trx.total)}${trx.kembalian > 0 ? `\nKembalian: ${rupiah(trx.kembalian)}` : ""}`;
+    return [header, "", items, "", payments, "", footer].join("\n");
+  };
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-[70]"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+      onClick={onClose}
+    >
+      <div
+        ref={containerRef}
+        onClick={(e) => e.stopPropagation()}
+        className="w-96 max-h-[85vh] overflow-y-auto rounded-2xl p-5"
+        style={cardStyle()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: c.text }}>{trx.id}</p>
+            <p className="text-xs" style={{ color: c.textDim }}>{new Date(trx.tanggal).toLocaleString("id-ID")}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }} aria-label="Tutup detail nota">
+            <X size={16} color={c.textDim} />
+          </button>
+        </div>
+
+        <p className="text-xs mb-2 capitalize" style={{ color: c.textDim }}>Kasir: <span style={{ color: c.text }}>{trx.kasir || "-"}</span></p>
+
+        <div className="rounded-xl overflow-hidden mb-3" style={tableWrapStyle()}>
+          {trx.items.map((it) => (
+            <div key={it.id} className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${c.border}`, backgroundColor: c.surface }}>
+              <div>
+                <p className="text-sm" style={{ color: c.text }}>{it.nama}</p>
+                <p className="text-xs font-mono" style={{ color: c.textDim }}>{it.qty} x {rupiah(it.harga)}</p>
+              </div>
+              <span className="text-sm font-mono" style={{ color: c.text }}>{rupiah(it.harga * it.qty)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1 mb-3" style={{ borderTop: `1px dashed ${c.border}`, paddingTop: 10 }}>
+          <div className="flex justify-between text-sm font-semibold">
+            <span style={{ color: c.text }}>Total</span>
+            <span style={{ color: c.text }}>{rupiah(trx.total)}</span>
+          </div>
+          {trx.payments.map((p, idx) => (
+            <div key={idx} className="flex justify-between text-xs font-mono capitalize" style={{ color: c.mint }}>
+              <span>{p.metode}</span><span>{rupiah(p.jumlah)}</span>
+            </div>
+          ))}
+          {trx.kembalian > 0 && (
+            <div className="flex justify-between text-xs font-mono" style={{ color: c.amber }}>
+              <span>Kembalian</span><span>{rupiah(trx.kembalian)}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <CopyButton getText={textForCopy} />
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function LaporanScreen({ data }) {
   const trx = data.transactions;
   const omzet = trx.reduce((s, t) => s + t.total, 0);
@@ -2465,6 +2550,12 @@ function LaporanScreen({ data }) {
   const [searchLaba, setSearchLaba] = useState("");
   const [searchRiwayat, setSearchRiwayat] = useState("");
   const [searchTrx, setSearchTrx] = useState("");
+
+  const [searchLaba, setSearchLaba] = useState("");
+const [searchRiwayat, setSearchRiwayat] = useState("");
+const [searchTrx, setSearchTrx] = useState("");
+const [selectedInvoice, setSelectedInvoice] = useState(null);
+const [highlightNota, setHighlightNota] = useState(0);
   const [rangeNota, setRangeNota] = useState({ preset: "semua" });
   const [rangeLaba, setRangeLaba] = useState({ preset: "semua" });
   const [rangeRiwayat, setRangeRiwayat] = useState({ preset: "semua" });
@@ -2481,6 +2572,26 @@ function LaporanScreen({ data }) {
     }))
     .filter((r) => (r.invoice + r.kasir).toLowerCase().includes(searchTrx.toLowerCase()));
 
+  useEffect(() => { setHighlightNota(0); }, [searchTrx, rangeNota]);
+
+const handleNotaKeyDown = (e) => {
+  if (!perTrxRows.length) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setHighlightNota((i) => Math.min(i + 1, perTrxRows.length - 1));
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setHighlightNota((i) => Math.max(i - 1, 0));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const row = perTrxRows[highlightNota];
+    if (row) {
+      const full = trx.find((t) => t.id === row.invoice);
+      if (full) setSelectedInvoice(full);
+    }
+  }
+};
+  
   const trxTextForCopy = () => {
     const header = ["Invoice", "Waktu", "Kasir", "Jumlah Item", "Jenis Barang", "Total"].join("\t");
     const rows = perTrxRows.map((r) => [r.invoice, fmtWaktu(r.waktu), r.kasir, r.jumlahItem, r.jenisBarang, r.total].join("\t"));
@@ -2541,10 +2652,17 @@ function LaporanScreen({ data }) {
         <ReportModal title="Riwayat Transaksi (per Nota)" onClose={() => setOpenReport(null)}>
           <DateRangeFilter range={rangeNota} setRange={setRangeNota} />
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-              <Search size={12} color={c.textDim} />
-              <input value={searchTrx} onChange={(e) => setSearchTrx(e.target.value)} placeholder="Cari invoice/kasir..." className="bg-transparent outline-none text-xs" style={{ color: c.text, width: 160 }} />
-            </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+  <Search size={12} color={c.textDim} />
+  <input
+    value={searchTrx}
+    onChange={(e) => setSearchTrx(e.target.value)}
+    onKeyDown={handleNotaKeyDown}
+    placeholder="Cari invoice/kasir... (↑↓ pilih, Enter buka)"
+    className="bg-transparent outline-none text-xs"
+    style={{ color: c.text, width: 220 }}
+  />
+</div>
             <CopyButton getText={trxTextForCopy} />
           </div>
           <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
@@ -2559,26 +2677,41 @@ function LaporanScreen({ data }) {
                   <th className="text-right px-4 py-2 font-medium">Total</th>
                 </tr>
               </thead>
-              <tbody>
-                {perTrxRows.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
-                )}
-                {perTrxRows.map((r) => (
-                  <tr key={r.invoice} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
-                    <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
-                    <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
-                    <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
+             <tbody>
+  {perTrxRows.length === 0 && (
+    <tr><td colSpan={6} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data.</td></tr>
+  )}
+  {perTrxRows.map((r, idx) => (
+    <tr
+      key={r.invoice}
+      onClick={() => {
+        const full = trx.find((t) => t.id === r.invoice);
+        if (full) setSelectedInvoice(full);
+      }}
+      onMouseEnter={() => setHighlightNota(idx)}
+      style={{
+        backgroundColor: idx === highlightNota ? c.mintDim : c.surface,
+        borderTop: `1px solid ${c.border}`,
+        boxShadow: idx === highlightNota ? `inset 0 0 0 1px ${c.mint}` : "none",
+        cursor: "pointer",
+      }}
+    >
+      <td className="px-4 py-2 font-mono text-xs" style={{ color: c.textDim }}>{r.invoice}</td>
+      <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+      <td className="px-4 py-2 capitalize" style={{ color: c.text }}>{r.kasir}</td>
+      <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jumlahItem}</td>
+      <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.jenisBarang}</td>
+      <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.total)}</td>
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
         </ReportModal>
       )}
-
+{selectedInvoice && (
+  <InvoiceDetailModal trx={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+)}
       {openReport === "analisis" && (
         <ReportModal title="Analisis Produk" onClose={() => setOpenReport(null)}>
           <ProductAnalysis data={data} />
