@@ -1531,9 +1531,14 @@ function KatalogScreen({ data }) {
   return (
     <div className="p-5">
       <div className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2" style={{ backgroundColor: c.bg }}>
-        <button onClick={() => setMode("visual")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "visual" ? c.mintDim : c.surfaceAlt, color: mode === "visual" ? c.mint : c.textDim }}>
+        <button onClick={() => setMode("visual")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: mode === "visual" ? c.mintDim : c.surfaceAlt, color: mode === "visual" ? c.mint : c.textDim }}>
           <Grid3x3 size={13} /> Bergambar
         </button>
+        <button onClick={() => setMode("text")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: mode === "text" ? c.mintDim : c.surfaceAlt, color: mode === "text" ? c.mint : c.textDim }}>
+          <List size={13} /> Teks
+        </button>
+        
+        {/* Kolom Pencarian yang sudah diperbaiki (rounded-xl & py-2) */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1" style={{ ...searchBarStyle(), boxShadow: `0 4px 8px -4px ${c.bg}` }}>
           <Search size={14} color={c.textDim} />
           <input
@@ -1548,6 +1553,7 @@ function KatalogScreen({ data }) {
       </div>
 
       {mode === "visual" ? (
+// ... (lanjutan kode Anda di bawahnya tetap sama)
         <div className="grid grid-cols-4 gap-3">
           {filtered.length === 0 && (
             <p className="col-span-4 text-center text-xs py-6" style={{ color: c.textDim }}>Tidak ada barang yang cocok.</p>
@@ -2149,7 +2155,9 @@ function OpnameScreen({ data, persist }) {
   return (
     <div className="p-5">
       <div className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2" style={{ backgroundColor: c.bg }}>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={searchBarStyle()}>
+        
+        {/* Kolom Pencarian yang sudah diperbaiki (rounded-xl & py-2) */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1" style={{ ...searchBarStyle(), boxShadow: `0 4px 8px -4px ${c.bg}` }}>
           <Search size={14} color={c.textDim} />
           <input
             value={search}
@@ -2159,7 +2167,8 @@ function OpnameScreen({ data, persist }) {
             style={{ color: c.text }}
           />
         </div>
-        <button onClick={simpanOpname} className="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
+
+        <button onClick={simpanOpname} className="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
           Simpan Hasil Opname
         </button>
       </div>
