@@ -124,7 +124,7 @@ const LIGHT_THEME_META = {
   },
   glasslight: {
     label: "Liquid Glass (Terang)",
-   pageGradient: "linear-gradient(160deg, #FAFBFC 0%, #F4F6F8 100%)",
+   pageGradient: "linear-gradient(160deg, #DCEBFA 0%, #C9DFF5 55%, #B8D4F0 100%)",
     auroraColors: ["#93C5FD", "#C4B5FD", "#7DD3FC", "#F0ABFC"],
     blobs: [
       { color: "#93C5FD", size: 520, blur: 130, opacity: 0.16, top: -160, left: -140 },
@@ -133,13 +133,13 @@ const LIGHT_THEME_META = {
     ],
     blur: 28,
     radius: 22,
-    cardBg: "rgba(255,255,255,0.85)",
+    cardBg: "rgba(255,255,255,0.97)",
     cardBorder: "rgba(15,23,42,0.10)",
-    cardShadow: "0 4px 16px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.06)",
+    cardShadow: "0 20px 50px rgba(30,58,138,.14), 0 4px 12px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,0.8)",
     navDefaultBg: "rgba(255,255,255,0.80)",
     navDefaultBorder: "rgba(148,163,184,0.4)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
-    navActiveBg: "rgba(255,255,255,0.65)",
+    navActiveBg: "rgba(255,255,255,0.95)",
     navActiveBorder: "rgba(37,99,235,0.4)",
     navActiveShadow: "0 4px 15px rgba(37,99,235,0.15)",
     accent: "#2563EB",
@@ -147,7 +147,7 @@ const LIGHT_THEME_META = {
   },
   arctic: {
     label: "Arctic Blue",
-    pageGradient: "linear-gradient(160deg, #F7FAFD 0%, #EEF4FA 100%)",
+    pageGradient: "linear-gradient(160deg, #C9E4FB 0%, #A9D2F5 55%, #8FC2ED 100%)",
     auroraColors: ["#7DD3FC", "#93C5FD", "#BAE6FD", "#A5F3FC"],
     blobs: [
       { color: "#7DD3FC", size: 560, blur: 140, opacity: 0.14, top: -170, left: -150 },
@@ -156,13 +156,13 @@ const LIGHT_THEME_META = {
     ],
     blur: 24,
     radius: 20,
-    cardBg: "rgba(255,255,255,0.88)",
+    cardBg: "rgba(255,255,255,0.96)",
     cardBorder: "rgba(29,78,216,0.12)",
-    cardShadow: "0 4px 16px rgba(29,78,216,.06), 0 1px 2px rgba(15,23,42,.06)",
+    cardShadow: "0 20px 50px rgba(29,78,216,.16), 0 4px 12px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,0.85)",
     navDefaultBg: "rgba(255,255,255,0.85)",
     navDefaultBorder: "rgba(147,197,253,0.45)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
-    navActiveBg: "rgba(255,255,255,0.85)",
+    navActiveBg: "rgba(255,255,255,0.95)",
     navActiveBorder: "#93C5FD",
     navActiveShadow: "0 4px 12px rgba(29,78,216,0.12)",
     accent: "#1D4ED8",
@@ -2683,7 +2683,10 @@ export default function App() {
           />
         </div>
       )}
-      <div className="px-5 pt-3 pb-1 flex items-center justify-between">
+      <div
+        className="px-5 pt-3 pb-1 flex items-center justify-between"
+        style={themeMeta() ? { backgroundColor: "rgba(255,255,255,0.5)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } : undefined}
+      >
         <div>
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
             Aspho Cash <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
