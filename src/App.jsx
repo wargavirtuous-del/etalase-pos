@@ -1291,13 +1291,21 @@ useFocusTrap(!!receipt, receiptRef);
                     <Banknote size={14} /> Cash
                   </button>
                   
-                  <button
+                 <button
                     onClick={() => addPayment("cashless", Math.max(sisa, 0))}
                     disabled={sisa <= 0}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium relative" // <-- Tambahkan 'relative' di sini
                     style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
                   >
                     <Wallet size={14} /> Cashless
+                    
+                    {/* Badge Notifikasi F5 */}
+                    <span 
+                      className="absolute -top-2 -right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm" 
+                      style={{ backgroundColor: c.mint, color: "#0B1210", border: `1px solid ${c.surface}` }}
+                    >
+                      F5
+                    </span>
                   </button>
                 </div>
 
@@ -1526,10 +1534,7 @@ function KatalogScreen({ data }) {
         <button onClick={() => setMode("visual")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "visual" ? c.mintDim : c.surfaceAlt, color: mode === "visual" ? c.mint : c.textDim }}>
           <Grid3x3 size={13} /> Bergambar
         </button>
-        <button onClick={() => setMode("text")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: mode === "text" ? c.mintDim : c.surfaceAlt, color: mode === "text" ? c.mint : c.textDim }}>
-          <List size={13} /> Teks
-        </button>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1" style={searchBarStyle()}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1" style={{ ...searchBarStyle(), boxShadow: `0 4px 8px -4px ${c.bg}` }}>
           <Search size={14} color={c.textDim} />
           <input
             value={search}
