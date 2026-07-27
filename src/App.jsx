@@ -1118,7 +1118,6 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   return (
     <div className="flex gap-5 p-5">
       <div
-        <div
         className="flex-1 flex flex-col rounded-xl overflow-hidden"
         style={
           currentThemeMode === "glass"
