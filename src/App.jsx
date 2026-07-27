@@ -496,6 +496,8 @@ function SettingsModal({ settings, update, onClose, currentUser, accounts, updat
   useModalKeys(true, null, onClose);
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+      <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={cardStyle()}>
+        <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
           <button onClick={onClose}><X size={16} color={c.textDim} /></button>
         </div>
