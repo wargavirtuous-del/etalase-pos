@@ -156,7 +156,7 @@ const LIGHT_THEME_META = {
     ],
     blur: 24,
     radius: 20,
-    cardBg: "rgba(255,255,255,0.96)",
+    cardBg: "rgba(232, 238, 241,0.65)",
     cardBorder: "rgba(29,78,216,0.12)",
     cardShadow: "0 20px 50px rgba(29,78,216,.16), 0 4px 12px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,0.85)",
     navDefaultBg: "rgba(255,255,255,0.85)",
