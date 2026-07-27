@@ -73,3 +73,70 @@ html, body, #root {
     margin: 0;
   }
 }
+.login-shell {
+  background: linear-gradient(180deg, #060B14 0%, #0A1830 55%, #0F2438 100%);
+}
+.login-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+.login-aurora-1 {
+  width: 480px; height: 480px; top: -140px; left: -120px;
+  background: radial-gradient(circle, rgba(62,207,142,0.35), transparent 70%);
+  animation: login-drift-1 16s ease-in-out infinite;
+}
+.login-aurora-2 {
+  width: 420px; height: 420px; top: 10%; right: -140px;
+  background: radial-gradient(circle, rgba(56,189,248,0.30), transparent 70%);
+  animation: login-drift-2 20s ease-in-out infinite;
+}
+.login-aurora-3 {
+  width: 460px; height: 460px; bottom: -160px; left: 20%;
+  background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
+  animation: login-drift-3 24s ease-in-out infinite;
+}
+@keyframes login-drift-1 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(40px,30px) scale(1.1); }
+}
+@keyframes login-drift-2 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-30px,20px) scale(0.95); }
+}
+@keyframes login-drift-3 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(25px,-25px) scale(1.05); }
+}
+.login-card {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.login-logo {
+  width: 56px; height: 56px; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #3ECF8E, #22A76B);
+  box-shadow: 0 8px 24px rgba(62,207,142,0.35);
+}
+.login-input {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+}
+.login-input::placeholder { color: rgba(255,255,255,0.45); }
+.login-btn-primary {
+  background: linear-gradient(135deg, #3ECF8E, #22A76B);
+  color: #0B1210;
+  transition: transform 0.15s ease;
+}
+.login-btn-primary:active { transform: scale(0.97); }
+.login-btn-secondary {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  transition: background 0.15s ease;
+}
