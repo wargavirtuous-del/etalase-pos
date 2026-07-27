@@ -6,6 +6,7 @@ import {
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
   BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp, FileText, TrendingUp
 } from "lucide-react";
+import { Search, Printer, FileSpreadsheet, FileText, Grid3x3, List, Wallet } from "lucide-react";
 
 const darkPalette = {
   bg: "#12171A",
@@ -2581,14 +2582,14 @@ function LaporanScreen({ data }) {
       laba: (it.harga - it.hargaBeli) * it.qty,
     }))
   ).sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
-  {/* Tombol Aksi Laporan: Cetak & Ekspor */}
+  {}
 <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
   <div className="text-xs font-medium" style={{ color: c.textDim }}>
     Opsi Dokumen & Laporan
   </div>
   <div className="flex items-center gap-2">
     
-    {/* Tombol Cetak Langsung */}
+    {}
     <button 
       onClick={() => window.print()}
       className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
@@ -2598,10 +2599,10 @@ function LaporanScreen({ data }) {
       <Printer size={13} /> Cetak Langsung
     </button>
 
-    {/* Tombol Ekspor ke Excel (Format CSV) */}
+    {}
     <button 
       onClick={() => {
-        // Logika pengunduhan data tabel ke format CSV (Excel)
+       
         alert("Mengunduh data laporan ke format Excel (CSV)...");
       }}
       className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
@@ -2611,10 +2612,10 @@ function LaporanScreen({ data }) {
       <FileSpreadsheet size={13} /> Excel
     </button>
 
-    {/* Tombol Ekspor PDF / Word */}
+    {}
     <button 
       onClick={() => {
-        // Membuka dialog cetak browser di mana pengguna bisa memilih opsi "Save as PDF" atau "Microsoft to PDF"
+       
         window.print();
       }}
       className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
@@ -2634,7 +2635,7 @@ function LaporanScreen({ data }) {
   const [openReport, setOpenReport] = useState(null);
   const reportKeys = ["nota", "analisis", "laba", "riwayat"];
   const reportRefs = useRef([]);
-  // Panah kiri/kanan/atas/bawah untuk pindah antar kartu laporan (pengganti mouse), Enter membuka kartu yang fokus.
+ 
   const handleReportCardKey = (e, idx) => {
     let nextIdx = null;
     if (e.key === "ArrowRight") nextIdx = (idx + 1) % reportKeys.length;
