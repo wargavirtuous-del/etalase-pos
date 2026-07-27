@@ -125,6 +125,7 @@ const LIGHT_THEME_META = {
   glasslight: {
     label: "Liquid Glass (Terang)",
    pageGradient: "linear-gradient(160deg, #FAFBFC 0%, #F4F6F8 100%)",
+    auroraColors: ["#93C5FD", "#C4B5FD", "#7DD3FC", "#F0ABFC"],
     blobs: [
       { color: "#93C5FD", size: 520, blur: 130, opacity: 0.16, top: -160, left: -140 },
       { color: "#C4B5FD", size: 460, blur: 130, opacity: 0.14, top: -80, right: -160 },
@@ -147,6 +148,7 @@ const LIGHT_THEME_META = {
   arctic: {
     label: "Arctic Blue",
     pageGradient: "linear-gradient(160deg, #F7FAFD 0%, #EEF4FA 100%)",
+    auroraColors: ["#7DD3FC", "#93C5FD", "#BAE6FD", "#A5F3FC"],
     blobs: [
       { color: "#7DD3FC", size: 560, blur: 140, opacity: 0.14, top: -170, left: -150 },
       { color: "#93C5FD", size: 480, blur: 140, opacity: 0.12, top: -60, right: -170 },
@@ -2659,23 +2661,22 @@ export default function App() {
           />
         </div>
       )}
-      {lightMeta && lightMeta.blobs.length > 0 && (
+      {lightMeta && lightMeta.auroraColors && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          {lightMeta.blobs.map((b, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full"
-              style={{
-                width: b.size,
-                height: b.size,
-                top: b.top,
-                left: b.left,
-                right: b.right,
-                bottom: b.bottom,
-                background: b.color,
-                opacity: b.opacity ?? 1,
-                filter: `blur(${b.blur}px)`,
-              }}
+          <div
+            className="absolute anim-aurora"
+            style={{
+              width: "180%",
+              height: "180%",
+              top: "-40%",
+              left: "-40%",
+              opacity: 0.18,
+              filter: "blur(90px)",
+              background: `conic-gradient(from 0deg at 50% 50%, ${lightMeta.auroraColors.join(", ")}, ${lightMeta.auroraColors[0]})`,
+            }}
+          />
+        </div>
+      )}
             />
           ))}
         </div>
