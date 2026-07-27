@@ -126,17 +126,17 @@ const LIGHT_THEME_META = {
     label: "Liquid Glass (Terang)",
     pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F8FAFC 55%, #EEF8FF 100%)",
     blobs: [
-      { color: "#60A5FA", size: 380, blur: 70, opacity: 0.28, top: -110, left: -90 },
-      { color: "#A78BFA", size: 320, blur: 70, opacity: 0.24, top: -60, right: -100 },
-      { color: "#67E8F9", size: 300, blur: 70, opacity: 0.20, top: 20, left: "38%" },
+      { color: "#60A5FA", size: 380, blur: 70, opacity: 0.20, top: -110, left: -90 },
+      { color: "#A78BFA", size: 320, blur: 70, opacity: 0.16, top: -60, right: -100 },
+      { color: "#67E8F9", size: 300, blur: 70, opacity: 0.14, top: 20, left: "38%" },
     ],
     blur: 28,
     radius: 22,
-    cardBg: "rgba(255,255,255,0.68)",
-    cardBorder: "rgba(255,255,255,0.9)",
+    cardBg: "rgba(255,255,255,0.88)",
+    cardBorder: "rgba(148,163,184,0.45)",
     cardShadow: "0 12px 40px rgba(15,23,42,.10)",
-    navDefaultBg: "rgba(255,255,255,0.30)",
-    navDefaultBorder: "rgba(255,255,255,0.75)",
+    navDefaultBg: "rgba(255,255,255,0.80)",
+    navDefaultBorder: "rgba(148,163,184,0.4)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
     navActiveBg: "rgba(255,255,255,0.65)",
     navActiveBorder: "rgba(37,99,235,0.4)",
@@ -148,16 +148,16 @@ const LIGHT_THEME_META = {
     label: "Arctic Blue",
     pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F0F9FF 55%, #DBEAFE 100%)",
     blobs: [
-       { color: "#60A5FA", size: 420, blur: 80, opacity: 0.22, top: -110, left: -90 },
-      { color: "#60A5FA", size: 360, blur: 80, opacity: 0.18, top: -50, right: -110 },
+       { color: "#60A5FA", size: 420, blur: 80, opacity: 0.16, top: -110, left: -90 },
+      { color: "#60A5FA", size: 360, blur: 80, opacity: 0.13, top: -50, right: -110 },
     ],
     blur: 24,
     radius: 20,
-    cardBg: "rgba(255,255,255,0.60)",
-    cardBorder: "rgba(255,255,255,0.9)",
+    cardBg: "rgba(255,255,255,0.90)",
+    cardBorder: "rgba(147,197,253,0.5)",
     cardShadow: "0 8px 24px rgba(29,78,216,.08)",
-    navDefaultBg: "rgba(255,255,255,0.40)",
-    navDefaultBorder: "rgba(255,255,255,0.75)",
+    navDefaultBg: "rgba(255,255,255,0.85)",
+    navDefaultBorder: "rgba(147,197,253,0.45)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
     navActiveBg: "rgba(255,255,255,0.85)",
     navActiveBorder: "#93C5FD",
@@ -502,9 +502,7 @@ function ManageAccountsSection({ accounts, updateAccounts }) {
 function SettingsModal({ settings, update, onClose, currentUser, accounts, updateAccounts }) {
   useModalKeys(true, null, onClose);
   return (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-      <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={cardStyle()}>
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
           <button onClick={onClose}><X size={16} color={c.textDim} /></button>
         </div>
