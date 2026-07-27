@@ -2677,10 +2677,6 @@ export default function App() {
           />
         </div>
       )}
-            />
-          ))}
-        </div>
-      )}
       <div className="px-5 pt-3 pb-1 flex items-center justify-between">
         <div>
           <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
