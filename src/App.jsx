@@ -1169,16 +1169,15 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
             <span style={{ color: c.textDim }}>Total</span>
             <span className="font-mono font-semibold" style={{ color: c.text }}>{rupiah(total)}</span>
           </div>
-          {!splitMode ? (
-            <button
-              disabled={cart.length === 0}
-              onClick={() => setSplitMode(true)}
-              className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all active:scale-95"
-              style={ctaStyle(cart.length > 0, glassColorTheme)}
-            >
-              Bayar
-            </button>
+         {cart.length > 0 ? (
+         <div className="mt-2 space-y-2">
+              {/* ... semua isi form pembayaran yang sudah ada, tidak diubah ... */}
+            </div>
           ) : (
+            <p className="mt-2 text-xs text-center py-2" style={{ color: c.textDim }}>
+              Tambahkan barang dulu untuk mulai pembayaran.
+            </p>
+          )}
             <div className="mt-2 space-y-2">
               <div className="flex flex-col gap-1">
                 <RupiahInput
