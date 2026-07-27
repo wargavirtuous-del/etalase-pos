@@ -295,6 +295,8 @@ function RupiahInput({ value, onChange, placeholder, className, style, onKeyDown
     <div className="relative">
       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: c.textDim }}>Rp</span>
       <input
+        inputMode="numeric"
+        pattern="[0-9]*"
         value={formatRibuan(value)}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
         onKeyDown={onKeyDown}
@@ -487,7 +489,7 @@ function ManageAccountsSection({ accounts, updateAccounts }) {
                     style={{ border: `1px solid ${c.border}`, color: c.text, width: 90 }}
                   />
                   <button onClick={doReset} className="text-[11px] px-2 py-1 rounded" style={{ backgroundColor: c.mint, color: "#0B1210" }}>OK</button>
-                  <button onClick={() => { setResetting(null); setNewPass(""); }} className="text-[11px] px-1.5 py-1" style={{ color: c.textDim }}>✕</button>
+                  <button onClick={() => { setResetting(null); setNewPass(""); }} className="text-[11px] px-1.5 py-1" style={{ color: c.textDim }} aria-label="Batal reset password">✕</button>
                 </div>
               ) : (
                 <button onClick={() => setResetting({ list: listKey, id: a.id })} className="text-[11px] px-2 py-1 rounded" style={{ backgroundColor: c.surface, color: c.textDim, border: `1px solid ${c.border}` }}>
@@ -501,15 +503,56 @@ function ManageAccountsSection({ accounts, updateAccounts }) {
     </div>
   );
 }
+function useFocusTrap(isOpen, containerRef) {
+  const prevFocusRef = useRef(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    prevFocusRef.current = document.activeElement;
+
+    // Fokus ke elemen pertama yang bisa difokus di dalam modal
+    const focusables = containerRef.current?.querySelectorAll(
+      'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    focusables?.[0]?.focus();
+
+    // Kunci Tab supaya tidak keluar dari modal
+    const handleTab = (e) => {
+      if (e.key !== "Tab") return;
+      const list = Array.from(
+        containerRef.current?.querySelectorAll(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        ) || []
+      );
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleTab);
+
+    return () => {
+      window.removeEventListener("keydown", handleTab);
+      prevFocusRef.current?.focus?.();
+    };
+  }, [isOpen]);
+}
 function SettingsModal({ settings, update, onClose, currentUser, accounts, updateAccounts }) {
+  const containerRef = useRef(null);
   useModalKeys(true, null, onClose);
+  useFocusTrap(true, containerRef);
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
       <div className="w-80 rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={cardStyle()}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold" style={{ color: c.text }}>Pengaturan</p>
-          <button onClick={onClose}><X size={16} color={c.textDim} /></button>
+          <button onClick={onClose} aria-label="Tutup pengaturan"><X size={16} color={c.textDim} /></button>
         </div>
 
         <p className="text-xs mb-2" style={{ color: c.textDim }}>Tema Aplikasi</p>
@@ -822,8 +865,10 @@ function QtyInput({ value, max, onCommit }) {
     if (clamped !== value) onCommit(clamped);
   };
 
-  return (
+ return (
     <input
+      inputMode="numeric"
+      pattern="[0-9]*"
       value={text}
       onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
       onBlur={commit}
@@ -885,7 +930,22 @@ function StokBadge({ n }) {
     </span>
   );
 }
-
+function ConfirmModal({ title, desc, onCancel, onConfirm, confirmLabel = "Ya, batalkan", confirmColor = c.coral, confirmTextColor = "#2A0E0E" }) {
+  const containerRef = useRef(null);
+  useFocusTrap(true, containerRef);
+  return (
+    <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+      <div ref={containerRef} className="w-72 rounded-xl p-4" style={cardStyle()}>
+        <p className="text-sm font-medium mb-1" style={{ color: c.text }}>{title}</p>
+        <p className="text-xs mb-3" style={{ color: c.textDim }}>{desc}</p>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Kembali</button>
+          <button onClick={onConfirm} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: confirmColor, color: confirmTextColor }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ---------------- KASIR ----------------
 function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl, glassColorTheme }) {
   const [cart, setCart] = useState([]);
@@ -950,12 +1010,20 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
     setTimeout(() => setCartBump(false), 300);
   };
 
-  // Penangkap scan global: cadangan kalau fokus kursor kebetulan gak lagi di kolom cari.
+ // Penangkap scan global: cadangan kalau fokus kursor kebetulan gak lagi di kolom cari.
   // Scanner mengetik sangat cepat (semua karakter dalam <100ms), beda dari ketikan manusia.
   useEffect(() => {
     let buffer = "";
     let lastTime = 0;
     const handler = (e) => {
+      // Kalau user sedang mengetik manual di input/textarea LAIN (bukan kolom cari Kasir),
+      // biarkan ketikan berjalan normal — jangan tangkap sebagai kode scan.
+      const activeTag = document.activeElement?.tagName;
+      const isTypingElsewhere =
+        (activeTag === "INPUT" || activeTag === "TEXTAREA") &&
+        document.activeElement !== inputRef.current;
+      if (isTypingElsewhere) return;
+
       const now = Date.now();
       if (now - lastTime > 120) buffer = "";
       lastTime = now;
@@ -1157,10 +1225,10 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                 <p className="text-xs font-medium truncate" style={{ color: c.text }}>{i.nama}</p>
                 <p className="text-[11px] font-mono" style={{ color: c.textDim }}>{rupiah(i.hargaJual)}</p>
               </div>
-              <button onClick={() => changeQty(i.id, -1)} className="p-1 rounded" style={{ backgroundColor: c.surfaceAlt }}><Minus size={12} color={c.text} /></button>
-              <QtyInput value={i.qty} max={i.etalase} onCommit={(n) => setQtyExact(i.id, n)} />
-              <button onClick={() => changeQty(i.id, 1)} className="p-1 rounded" style={{ backgroundColor: c.surfaceAlt }}><Plus size={12} color={c.text} /></button>
-              <button onClick={() => changeQty(i.id, -i.qty)} className="p-1 rounded ml-1"><Trash2 size={12} color={c.coral} /></button>
+             <button onClick={() => changeQty(i.id, -1)} className="p-2 rounded min-w-[32px] min-h-[32px] flex items-center justify-center" style={{ backgroundColor: c.surfaceAlt }} aria-label={`Kurangi jumlah ${i.nama}`}><Minus size={12} color={c.text} /></button>
+<QtyInput value={i.qty} max={i.etalase} onCommit={(n) => setQtyExact(i.id, n)} />
+<button onClick={() => changeQty(i.id, 1)} className="p-2 rounded min-w-[32px] min-h-[32px] flex items-center justify-center" style={{ backgroundColor: c.surfaceAlt }} aria-label={`Tambah jumlah ${i.nama}`}><Plus size={12} color={c.text} /></button>
+<button onClick={() => changeQty(i.id, -i.qty)} className="p-2 rounded ml-1 min-w-[32px] min-h-[32px] flex items-center justify-center" aria-label={`Hapus ${i.nama} dari keranjang`}><Trash2 size={12} color={c.coral} /></button>
             </div>
           ))}
         </div>
@@ -1297,17 +1365,13 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       </div>
 
       {voidConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="w-72 rounded-xl p-4" style={cardStyle()}>
-            <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Batalkan transaksi ini?</p>
-            <p className="text-xs mb-3" style={{ color: c.textDim }}>Item di keranjang akan dihapus dan tidak tersimpan.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setVoidConfirm(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Kembali</button>
-              <button onClick={batalkanTransaksi} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coral, color: "#2A0E0E" }}>Ya, batalkan</button>
-            </div>
-          </div>
-        </div>
-      )}
+         <ConfirmModal
+    title="Batalkan transaksi ini?"
+    desc="Item di keranjang akan dihapus dan tidak tersimpan."
+    onCancel={() => setVoidConfirm(false)}
+    onConfirm={batalkanTransaksi}
+  />
+)}
 
       {showCelebration && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[60]">
@@ -1323,7 +1387,9 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
 
       {receipt && (
         <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
+          <div ref={receiptRef} className="w-72 rounded-xl overflow-hidden" style={{ backgroundColor: "#fff" }}>
+            const receiptRef = useRef(null);
+useFocusTrap(!!receipt, receiptRef);
             <div className="p-4 font-mono text-[11px] print-receipt" style={{ color: "#111" }}>
               <p className="text-center font-semibold receipt-title" style={{ textTransform: "uppercase" }}>{STORE_NAME}</p>
               <div className="my-1" style={{ borderTop: "1px dashed #999" }} />
@@ -1369,20 +1435,13 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
       )}
 
       {cancelReceiptConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="w-72 rounded-xl p-4" style={cardStyle()}>
-            <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Batalkan transaksi {receipt?.id}?</p>
-            <p className="text-xs mb-3" style={{ color: c.textDim }}>Stok akan dikembalikan dan transaksi dihapus dari riwayat & laporan. Tindakan ini tercatat di log audit.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setCancelReceiptConfirm(false)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Kembali</button>
-              <button onClick={batalkanTransaksiSelesai} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coral, color: "#2A0E0E" }}>Ya, batalkan</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        <ConfirmModal
+    title={`Batalkan transaksi ${receipt?.id}?`}
+    desc="Stok akan dikembalikan dan transaksi dihapus dari riwayat & laporan. Tindakan ini tercatat di log audit."
+    onCancel={() => setCancelReceiptConfirm(false)}
+    onConfirm={batalkanTransaksiSelesai}
+  />
+)}
 
 // ---------------- KATALOG ----------------
 function KatalogScreen({ data }) {
@@ -1500,7 +1559,12 @@ function GudangScreen({ data, persist, role }) {
   const [search, setSearch] = useState("");
   const [highlightRow, setHighlightRow] = useState(0);
   const addFormRef = useRef(null);
-
+  const editingRef = useRef(null);
+useFocusTrap(!!editing, editingRef);
+  const showLabelRef = useRef(null);
+useFocusTrap(!!showLabel, showLabelRef);
+  const bulkPrintRef = useRef(null);
+useFocusTrap(bulkPrint, bulkPrintRef);
   const handleEnterNext = (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -1769,7 +1833,7 @@ function GudangScreen({ data, persist, role }) {
                 <button onClick={() => setBulkPrint(true)} className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1" style={{ backgroundColor: c.mint, color: "#0B1210" }}>
                   <Printer size={12} /> Cetak Label Terpilih
                 </button>
-                <button onClick={() => setSelected([])} className="text-xs px-2 py-1.5 rounded-lg" style={{ color: c.textDim }}>✕</button>
+                <button onClick={() => setSelected([])} className="text-xs px-2 py-1.5 rounded-lg" style={{ color: c.textDim }} aria-label="Batalkan pilihan barang">✕</button>
               </div>
             </div>
             {copyMsg && <p className="text-[11px] mt-1.5" style={{ color: c.mint }}>{copyMsg}</p>}
@@ -1809,13 +1873,13 @@ function GudangScreen({ data, persist, role }) {
                   <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.etalase}</td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <input value={refillInputs[p.id] || ""} onChange={(e) => setRefillInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                     <input inputMode="numeric" pattern="[0-9]*" value={refillInputs[p.id] || ""} onChange={(e) => setRefillInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
                       <button onClick={() => doRefill(p)} className="text-xs px-2 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.amberDim, color: c.amber }}>Isi</button>
                     </div>
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <input value={inputs[p.id] || ""} onChange={(e) => setInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                     <input inputMode="numeric" pattern="[0-9]*" value={inputs[p.id] || ""} onChange={(e) => setInputs((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="w-14 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
                       <button onClick={() => doTransfer(p)} className="text-xs px-2 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.mintDim, color: c.mint }}>Transfer</button>
                     </div>
                   </td>
@@ -1911,8 +1975,7 @@ function GudangScreen({ data, persist, role }) {
       )}
 
       {editing && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4 w-80" style={cardStyle()}>
+        <div ref={editingRef} className="rounded-xl p-4 w-80" style={cardStyle()}>
             <p className="text-sm font-semibold mb-3" style={{ color: c.text }}>Edit Barang</p>
             <div className="space-y-2">
               <input value={editing.nama} onChange={(e) => setEditing((prev) => ({ ...prev, nama: e.target.value }))} placeholder="Nama barang" className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
@@ -1926,7 +1989,7 @@ function GudangScreen({ data, persist, role }) {
               <div className="flex gap-2 pt-1" style={{ borderTop: `1px dashed ${c.border}` }}>
                 <div className="flex-1">
                   <p className="text-[10px] mb-1" style={{ color: c.textDim }}>Stok Gudang</p>
-                  <input value={editing.gudang} onChange={(e) => setEditing((prev) => ({ ...prev, gudang: e.target.value.replace(/\D/g, "") }))} className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                  <input inputMode="numeric" pattern="[0-9]*" value={editing.gudang} onChange={(e) => setEditing((prev) => ({ ...prev, gudang: e.target.value.replace(/\D/g, "") }))} className="w-full text-sm bg-transparent outline-none px-2 py-1.5 rounded-lg" style={{ border: `1px solid ${c.border}`, color: c.text }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] mb-1" style={{ color: c.textDim }}>Stok Etalase</p>
@@ -1944,21 +2007,17 @@ function GudangScreen({ data, persist, role }) {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4 w-72" style={cardStyle()}>
-            <p className="text-sm font-medium mb-1" style={{ color: c.text }}>Hapus "{deleteConfirm.nama}"?</p>
-            <p className="text-xs mb-3" style={{ color: c.textDim }}>Barang akan hilang dari katalog, gudang, dan etalase. Riwayat transaksi lama tidak terpengaruh.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Batal</button>
-              <button onClick={() => hapusBarang(deleteConfirm)} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.coral, color: "#2A0E0E" }}>Ya, hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+        <ConfirmModal
+    title={`Hapus "${deleteConfirm.nama}"?`}
+    desc="Barang akan hilang dari katalog, gudang, dan etalase. Riwayat transaksi lama tidak terpengaruh."
+    onCancel={() => setDeleteConfirm(null)}
+    onConfirm={() => hapusBarang(deleteConfirm)}
+    confirmLabel="Ya, hapus"
+  />
+)}
 
       {showLabel && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4" style={{ backgroundColor: "#fff", width: 220 }}>
+        <div ref={showLabelRef} className="rounded-xl p-4" style={{ backgroundColor: "#fff", width: 220 }}>
             <div className="print-receipt">
               <p className="text-xs font-semibold text-center mb-1" style={{ color: "#111" }}>{showLabel.nama}</p>
               <p className="text-xs text-center mb-2" style={{ color: "#333" }}>{rupiah(showLabel.hargaJual)}</p>
@@ -1975,8 +2034,7 @@ function GudangScreen({ data, persist, role }) {
       )}
 
       {bulkPrint && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: "#fff", width: 260 }}>
+      <div ref={bulkPrintRef} className="rounded-xl p-4 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: "#fff", width: 260 }}>
             <div className="grid grid-cols-1 gap-3 print-receipt">
               {selectedProducts.map((p) => (
                 <div key={p.id} className="pb-3" style={{ borderBottom: "1px dashed #ccc" }}>
@@ -2081,7 +2139,7 @@ function OpnameScreen({ data, persist }) {
                 <td className="px-4 py-2" style={{ color: c.text }}>{p.nama}</td>
                 <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{p.etalase}</td>
                 <td className="px-4 py-2 text-right">
-                  <input value={fisik[p.id] ?? ""} onChange={(e) => setFisik((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="—" className="w-16 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
+                  <input inputMode="numeric" pattern="[0-9]*" value={fisik[p.id] ?? ""} onChange={(e) => setFisik((prev) => ({ ...prev, [p.id]: e.target.value.replace(/\D/g, "") }))} placeholder="—" className="w-16 text-right bg-transparent outline-none font-mono text-sm px-1 py-0.5 rounded" style={{ border: `1px solid ${c.border}`, color: c.text }} />
                 </td>
                 <td className="px-4 py-2 text-right">
                   {p.ada ? (
@@ -2329,13 +2387,15 @@ function DateRangeFilter({ range, setRange }) {
 }
 
 function ReportModal({ title, onClose, children }) {
+  const containerRef = useRef(null);
   useModalKeys(true, null, onClose);
+  useFocusTrap(true, containerRef);
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
       <div className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl p-5" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-base font-semibold" style={{ color: c.text }}>{title}</p>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }}><X size={16} color={c.textDim} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ backgroundColor: c.surfaceAlt }} aria-label="Tutup laporan"><X size={16} color={c.textDim} /></button>
         </div>
         {children}
       </div>
@@ -2696,12 +2756,13 @@ export default function App() {
             {currentUser.id} · {currentUser.role}
           </span>
           <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg"
-            style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}
-          >
-            <SettingsIcon size={14} color={c.textDim} />
-          </button>
+  onClick={() => setShowSettings(true)}
+  className="p-2 rounded-lg"
+  style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}
+  aria-label="Buka pengaturan"
+>
+  <SettingsIcon size={14} color={c.textDim} />
+</button>
           <button
             onClick={() => setCurrentUser(null)}
             className="text-xs px-3 py-1.5 rounded-lg font-medium"
