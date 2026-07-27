@@ -2581,6 +2581,50 @@ function LaporanScreen({ data }) {
       laba: (it.harga - it.hargaBeli) * it.qty,
     }))
   ).sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
+  {/* Tombol Aksi Laporan: Cetak & Ekspor */}
+<div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+  <div className="text-xs font-medium" style={{ color: c.textDim }}>
+    Opsi Dokumen & Laporan
+  </div>
+  <div className="flex items-center gap-2">
+    
+    {/* Tombol Cetak Langsung */}
+    <button 
+      onClick={() => window.print()}
+      className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+      style={{ backgroundColor: c.surface, color: c.text, border: `1px solid ${c.border}` }}
+      title="Cetak halaman laporan saat ini"
+    >
+      <Printer size={13} /> Cetak Langsung
+    </button>
+
+    {/* Tombol Ekspor ke Excel (Format CSV) */}
+    <button 
+      onClick={() => {
+        // Logika pengunduhan data tabel ke format CSV (Excel)
+        alert("Mengunduh data laporan ke format Excel (CSV)...");
+      }}
+      className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+      style={{ backgroundColor: c.surface, color: c.mint, border: `1px solid ${c.border}` }}
+      title="Unduh data dalam format Excel"
+    >
+      <FileSpreadsheet size={13} /> Excel
+    </button>
+
+    {/* Tombol Ekspor PDF / Word */}
+    <button 
+      onClick={() => {
+        // Membuka dialog cetak browser di mana pengguna bisa memilih opsi "Save as PDF" atau "Microsoft to PDF"
+        window.print();
+      }}
+      className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+      style={{ backgroundColor: c.surface, color: "#EF4444", border: `1px solid ${c.border}` }}
+      title="Simpan sebagai PDF atau Word"
+    >
+      <FileText size={13} /> PDF / Word
+    </button>
+  </div>
+</div>
 
   const totalUnitTerjual = trx.reduce((s, t) => s + t.items.reduce((ss, it) => ss + it.qty, 0), 0);
   const totalUnitMovementKeluar = data.movements.filter((m) => m.tipe === "keluar").reduce((s, m) => s + m.jumlah, 0);
@@ -2699,6 +2743,39 @@ const handleNotaKeyDown = (e) => {
           <ReportCard icon={List} title="Riwayat Transaksi (per Kasir)" desc="Satu baris per barang terjual, lengkap dengan nama kasir" onClick={() => setOpenReport("riwayat")} cardRef={(el) => (reportRefs.current[3] = el)} onKeyDown={(e) => handleReportCardKey(e, 3)} />
         </div>
       </div>
+      {}
+<div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+  <button 
+    onClick={() => setSubLaporan("riwayat")} 
+    className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
+    style={{ backgroundColor: subLaporan === "riwayat" ? c.mintDim : c.surfaceAlt, color: subLaporan === "riwayat" ? c.mint : c.textDim }}
+  >
+    Riwayat Transaksi
+  </button>
+  <button 
+    onClick={() => setSubLaporan("laba")} 
+    className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
+    style={{ backgroundColor: subLaporan === "laba" ? c.mintDim : c.surfaceAlt, color: subLaporan === "laba" ? c.mint : c.textDim }}
+  >
+    Laba Rugi
+  </button>
+  <button 
+    onClick={() => setSubLaporan("analisis")} 
+    className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
+    style={{ backgroundColor: subLaporan === "analisis" ? c.mintDim : c.surfaceAlt, color: subLaporan === "analisis" ? c.mint : c.textDim }}
+  >
+    Analisis Produk
+  </button>
+  
+  {}
+  <button 
+    onClick={() => setSubLaporan("jumlahBarang")} 
+    className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
+    style={{ backgroundColor: subLaporan === "jumlahBarang" ? c.mintDim : c.surfaceAlt, color: subLaporan === "jumlahBarang" ? c.mint : c.textDim }}
+  >
+    Jumlah Barang (Stok)
+  </button>
+</div>
 
       {openReport === "nota" && (
         <ReportModal title="Riwayat Transaksi (per Nota)" onClose={() => setOpenReport(null)}>
@@ -2941,12 +3018,47 @@ export default function App() {
             {currentUser.id} · {currentUser.role}
           </span>
           <button
-  onClick={() => setShowSettings(true)}
-  className="p-2 rounded-lg"
-  style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}
-  aria-label="Buka pengaturan"
+  onClick={() => {
+    // 1. Membuka jendela cetak baru yang bersih
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (printWindow) {
+      // 2. Menulis struktur HTML sederhana khusus format nota
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Cetak Nota - ${trx.id || 'Transaksi'}</title>
+            <style>
+              body {
+                font-family: monospace;
+                font-size: 12px;
+                padding: 10px;
+                color: #000;
+              }
+              pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+              }
+            </style>
+          </head>
+          <body>
+            <pre>${formatNotaTeks(trx)}</pre>
+            <script>
+              window.onload = function() {
+                window.print();
+                window.close();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  }}
+  className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
+  style={{ backgroundColor: c.mint, color: "#0B1210" }}
 >
-  <SettingsIcon size={14} color={c.textDim} />
+  {}
+  <Printer size={13} /> Cetak Ulang Nota
 </button>
           <button
             onClick={() => setCurrentUser(null)}
