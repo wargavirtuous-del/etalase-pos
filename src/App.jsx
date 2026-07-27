@@ -2547,9 +2547,6 @@ function LaporanScreen({ data }) {
       reportRefs.current[nextIdx]?.focus();
     }
   };
-  const [searchLaba, setSearchLaba] = useState("");
-  const [searchRiwayat, setSearchRiwayat] = useState("");
-  const [searchTrx, setSearchTrx] = useState("");
 
   const [searchLaba, setSearchLaba] = useState("");
 const [searchRiwayat, setSearchRiwayat] = useState("");
