@@ -2005,10 +2005,8 @@ useFocusTrap(bulkPrint, bulkPrintRef);
               <button onClick={() => setEditing(null)} className="flex-1 py-2 rounded-lg text-xs" style={{ backgroundColor: c.surfaceAlt, color: c.text }}>Batal</button>
               <button onClick={simpanEdit} className="flex-1 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: c.mint, color: "#0B1210" }}>Simpan</button>
             </div>
-          </div>
-        </div>
       )}
-
+          
       {deleteConfirm && (
         <ConfirmModal
     title={`Hapus "${deleteConfirm.nama}"?`}
