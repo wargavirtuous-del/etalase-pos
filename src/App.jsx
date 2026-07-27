@@ -126,13 +126,13 @@ const LIGHT_THEME_META = {
     label: "Liquid Glass (Terang)",
     pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F8FAFC 55%, #EEF8FF 100%)",
     blobs: [
-      { color: "#60A5FA", size: 380, blur: 70, top: -110, left: -90 },
-      { color: "#A78BFA", size: 320, blur: 70, top: -60, right: -100 },
-      { color: "#67E8F9", size: 300, blur: 70, top: 20, left: "38%" },
+      { color: "#60A5FA", size: 380, blur: 70, opacity: 0.28, top: -110, left: -90 },
+      { color: "#A78BFA", size: 320, blur: 70, opacity: 0.24, top: -60, right: -100 },
+      { color: "#67E8F9", size: 300, blur: 70, opacity: 0.20, top: 20, left: "38%" },
     ],
     blur: 28,
     radius: 22,
-    cardBg: "rgba(255,255,255,0.42)",
+    cardBg: "rgba(255,255,255,0.68)",
     cardBorder: "rgba(255,255,255,0.9)",
     cardShadow: "0 12px 40px rgba(15,23,42,.10)",
     navDefaultBg: "rgba(255,255,255,0.30)",
@@ -148,8 +148,8 @@ const LIGHT_THEME_META = {
     label: "Arctic Blue",
     pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F0F9FF 55%, #DBEAFE 100%)",
     blobs: [
-      { color: "#60A5FA", size: 420, blur: 80, opacity: 1, top: -110, left: -90 },
-      { color: "#60A5FA", size: 360, blur: 80, opacity: 1, top: -50, right: -110 },
+       { color: "#60A5FA", size: 420, blur: 80, opacity: 0.22, top: -110, left: -90 },
+      { color: "#60A5FA", size: 360, blur: 80, opacity: 0.18, top: -50, right: -110 },
     ],
     blur: 24,
     radius: 20,
@@ -828,10 +828,14 @@ function QtyInput({ value, max, onCommit }) {
 }
 
 function successTextStyle() {
+  const isLightGlass = currentThemeMode === "glasslight" || currentThemeMode === "arctic";
   return {
     color: c.success,
     fontWeight: 700,
-    textShadow: currentThemeMode === "glass" ? "0 1px 4px rgba(0,0,0,0.45)" : "none",
+    textShadow:
+      currentThemeMode === "glass" ? "0 1px 4px rgba(0,0,0,0.45)" :
+      isLightGlass ? "0 1px 3px rgba(255,255,255,0.7)" :
+      "none",
   };
 }
 
