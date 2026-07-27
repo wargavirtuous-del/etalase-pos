@@ -980,14 +980,18 @@ useFocusTrap(!!receipt, receiptRef);
   useEffect(() => { setHighlight(0); }, [query]);
 
   // Navigasi hasil pencarian pakai panah atas/bawah, pilih dengan Enter.
-  const handleSearchKeyDown = (e) => {
+ const handleSearchKeyDown = (e) => {
     if (!filtered.length) return;
+    let nextHighlight = highlight;
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlight((i) => Math.min(i + 1, filtered.length - 1));
+      nextHighlight = Math.min(highlight + 1, filtered.length - 1);
+      setHighlight(nextHighlight);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlight((i) => Math.max(i - 1, 0));
+      nextHighlight = Math.max(highlight - 1, 0);
+      setHighlight(nextHighlight);
     } else if (e.key === "Enter") {
       const target = filtered[highlight];
       if (target && target.etalase > 0) {
@@ -995,6 +999,18 @@ useFocusTrap(!!receipt, receiptRef);
         addToCart(target);
         setQuery("");
       }
+      return; // Berhenti di sini agar tidak menjalankan scroll di bawah
+    }
+
+    // Perintah untuk menggulir ke elemen yang disorot
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      // Gunakan setTimeout agar DOM punya waktu untuk render state terbaru
+      setTimeout(() => {
+        document.getElementById(`kasir-item-${nextHighlight}`)?.scrollIntoView({
+          block: "nearest", // Menggulir seminimal mungkin agar elemen terlihat
+          behavior: "smooth"
+        });
+      }, 0);
     }
   };
 
@@ -1324,12 +1340,14 @@ useFocusTrap(!!receipt, receiptRef);
                 return (
                   <button
                     key={p.id}
+                    id={`kasir-item-${idx}`} // <--- TAMBAHKAN BARIS INI DI SINI
                     onClick={() => addToCart(p)}
                     onMouseEnter={() => setHighlight(idx)}
                     disabled={habis}
                     className="w-full flex items-center justify-between px-4 py-2.5 text-left"
                     style={{ backgroundColor: isHi ? c.mintDim : c.surface, borderBottom: `1px solid ${c.border}`, boxShadow: isHi ? `inset 0 0 0 1px ${c.mint}` : "none", opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer" }}
                   >
+                    {/* ... isi tidak perlu diubah ... */}
                     <span className="text-sm" style={{ color: c.text }}>{p.nama}</span>
                     <div className="flex items-center gap-4">
                       <StokBadge n={p.etalase} />
@@ -1346,12 +1364,14 @@ useFocusTrap(!!receipt, receiptRef);
             return (
               <button
                 key={p.id}
+                id={`kasir-item-${idx}`} // <--- TAMBAHKAN JUGA BARIS INI DI SINI
                 onClick={() => addToCart(p)}
                 onMouseEnter={() => setHighlight(idx)}
                 disabled={habis}
                 className="text-left p-3 rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3"
                 style={cardStyle({ opacity: habis ? 0.45 : 1, cursor: habis ? "not-allowed" : "pointer", ring: isHi })}
               >
+                {/* ... isi tidak perlu diubah ... */}
                 <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center overflow-hidden" style={{ backgroundColor: c.surfaceAlt }}>
                   {p.foto ? <img src={p.foto} alt={p.nama} className="w-full h-full object-cover" /> : <Package size={18} color={c.textDim} />}
                 </div>
