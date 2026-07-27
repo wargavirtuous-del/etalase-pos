@@ -685,7 +685,7 @@ function LoginGate({ onLogin, accounts }) {
                 Masuk
               </button>
             </div>
-            
+            <a
               href={`https://wa.me/62${STORE_PHONE.replace(/\D/g, "").replace(/^0/, "")}?text=${encodeURIComponent(`Halo, saya lupa password akun ${mode} dengan ID: ${id || "(isi ID kamu)"}. Mohon bantuan reset password.`)}`}
               target="_blank"
               rel="noreferrer"
