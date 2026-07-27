@@ -895,7 +895,11 @@ function successTextStyle() {
 
 function searchBarStyle() {
   if (currentThemeMode === "glass") {
-    return { backgroundColor: "rgba(255,255,255,0.20)", border: "1px solid rgba(255,255,255,0.35)" };
+    return { 
+      backgroundColor: "rgba(255,255,255,0.20)", 
+      border: "1px solid rgba(255,255,255,0.35)", 
+      borderRadius: 12 // <- Memaksa melengkung di mode glass
+    };
   }
   const m = themeMeta();
   if (m) {
@@ -907,9 +911,12 @@ function searchBarStyle() {
       WebkitBackdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
     };
   }
-  return { backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` };
+  return { 
+    backgroundColor: c.surfaceAlt, 
+    border: `1px solid ${c.border}`, 
+    borderRadius: 12 // <- Memaksa melengkung di mode standar/gelap
+  };
 }
-
 function ctaStyle(enabled, glassColorTheme) {
   if (!enabled) return { backgroundColor: c.surfaceAlt, color: c.textDim };
   if (currentThemeMode === "glass") {
@@ -963,11 +970,12 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef(null);
   const receiptRef = useRef(null);
+  const cartEndRef = useRef(null);
 useFocusTrap(!!receipt, receiptRef);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [cart.length, receipt]);
+    cartEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [cart.length]);
 
   const products = data.products;
   const filtered = products.filter(
@@ -1249,6 +1257,8 @@ useFocusTrap(!!receipt, receiptRef);
 <button onClick={() => changeQty(i.id, -i.qty)} className="p-2 rounded ml-1 min-w-[32px] min-h-[32px] flex items-center justify-center" aria-label={`Hapus ${i.nama} dari keranjang`}><Trash2 size={12} color={c.coral} /></button>
             </div>
           ))}
+          {}
+          <div ref={cartEndRef} />
         </div>
         <div className="px-4 py-3" style={{ borderTop: `1px dashed ${c.border}` }}>
           <div className="flex justify-between text-sm mb-1">
@@ -1257,29 +1267,40 @@ useFocusTrap(!!receipt, receiptRef);
           </div>
          {cart.length > 0 ? (
             <div className="mt-2 space-y-2">
-              <div className="flex flex-col gap-1">
-                <RupiahInput
-                  value={cashInput}
-                  onChange={(v) => { setCashInput(v); setCashWarning(""); }}
-                  placeholder="Uang diterima (cash)"
-                  className="w-full text-xs bg-transparent outline-none py-1.5 pr-2 rounded-lg font-mono"
-                  style={{ border: `1px solid ${c.border}`, color: c.text }}
-                />
-                <button
-                  onClick={bayarCash}
-                  disabled={sisa <= 0}
-                  className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium"
-                  style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
-                >
-                  <Banknote size={12} /> Bayar Cash
-                </button>
-              </div>
-              <div className="flex gap-1.5">
-                {[{ key: "cashless", icon: Wallet, label: "cashless (F5)" }].map(({ key, icon: Icon, label }) => (
-                  <button key={key} onClick={() => addPayment(key, Math.max(sisa, 0))} disabled={sisa <= 0} className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
-                    <Icon size={14} />{label}
+              {}
+              <div className="flex gap-2 items-center">
+                {}
+                <div className="flex-[1.2]">
+                  <RupiahInput
+                    value={cashInput}
+                    onChange={(v) => { setCashInput(v); setCashWarning(""); }}
+                    onKeyDown={(e) => e.key === "Enter" && bayarCash()}
+                    placeholder="Uang diterima"
+                    className="w-full text-xs bg-transparent outline-none py-2 pr-2 rounded-lg font-mono"
+                    style={{ border: `1px solid ${c.border}`, color: c.text }}
+                  />
+                </div>
+                {}
+                <div className="flex flex-1 gap-1.5">
+                  <button
+                    onClick={bayarCash}
+                    disabled={sisa <= 0}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium"
+                    style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+                  >
+                    <Banknote size={14} /> Cash
                   </button>
-                ))}
+                  
+                  <button
+                    onClick={() => addPayment("cashless", Math.max(sisa, 0))}
+                    disabled={sisa <= 0}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium"
+                    style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+                  >
+                    <Wallet size={14} /> Cashless
+                  </button>
+                </div>
+
               </div>
               {cashWarning && (
                 <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-lg text-[11px]" style={{ backgroundColor: c.coralDim, color: c.coral }}>
