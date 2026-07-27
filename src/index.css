@@ -155,3 +155,12 @@ html, body, #root {
 .anim-drift-1 { animation: login-drift-1 15s ease-in-out infinite; }
 .anim-drift-2 { animation: login-drift-2 20s ease-in-out infinite; }
 .anim-drift-3 { animation: login-drift-3 25s ease-in-out infinite; }
+/* Fokus jelas untuk semua elemen interaktif, tapi HANYA saat navigasi keyboard */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring, #3ECF8E);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
