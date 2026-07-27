@@ -43,7 +43,7 @@ const GLASS_THEMES = {
   aurora: {
     label: "Aurora Blue",
     gradient: "linear-gradient(160deg, #0F172A 0%, #1D4ED8 55%, #60A5FA 100%)",
-    blobs: ["rgba(99,102,241,0.35)", "rgba(59,130,246,0.30)", "rgba(6,182,212,0.25)"],
+    blobs: ["rgba(99,102,241,0.70)", "rgba(59,130,246,0.60)", "rgba(6,182,212,0.50)"],
     accent: "#3B82F6",
     ctaGradient: "linear-gradient(135deg, #4F8DFF, #2F6FFF)",
     tabTint: { kasir: "rgba(59,130,246,0.16)", katalog: "rgba(59,130,246,0.10)", gudang: "rgba(6,182,212,0.16)", opname: "rgba(6,182,212,0.10)", laporan: "rgba(168,85,247,0.16)" },
