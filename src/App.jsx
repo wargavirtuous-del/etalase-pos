@@ -124,17 +124,14 @@ const LIGHT_THEME_META = {
   },
   glasslight: {
     label: "Liquid Glass (Terang)",
-    pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F8FAFC 55%, #EEF8FF 100%)",
-    blobs: [
-      { color: "#60A5FA", size: 380, blur: 70, opacity: 0.20, top: -110, left: -90 },
-      { color: "#A78BFA", size: 320, blur: 70, opacity: 0.16, top: -60, right: -100 },
-      { color: "#67E8F9", size: 300, blur: 70, opacity: 0.14, top: 20, left: "38%" },
+    pageGradient: "linear-gradient(160deg, #FAFBFC 0%, #F4F6F8 100%)",
+    blobs: [],
     ],
     blur: 28,
     radius: 22,
-    cardBg: "rgba(255,255,255,0.88)",
-    cardBorder: "rgba(148,163,184,0.45)",
-    cardShadow: "0 12px 40px rgba(15,23,42,.10)",
+    cardBg: "rgba(255,255,255,0.85)",
+    cardBorder: "rgba(15,23,42,0.10)",
+    cardShadow: "0 4px 16px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.06)",
     navDefaultBg: "rgba(255,255,255,0.80)",
     navDefaultBorder: "rgba(148,163,184,0.4)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
@@ -146,16 +143,14 @@ const LIGHT_THEME_META = {
   },
   arctic: {
     label: "Arctic Blue",
-    pageGradient: "linear-gradient(160deg, #FFFFFF 0%, #F0F9FF 55%, #DBEAFE 100%)",
-    blobs: [
-       { color: "#60A5FA", size: 420, blur: 80, opacity: 0.16, top: -110, left: -90 },
-      { color: "#60A5FA", size: 360, blur: 80, opacity: 0.13, top: -50, right: -110 },
+    pageGradient: "linear-gradient(160deg, #F7FAFD 0%, #EEF4FA 100%)",
+    blobs: [],
     ],
     blur: 24,
     radius: 20,
-    cardBg: "rgba(255,255,255,0.90)",
-    cardBorder: "rgba(147,197,253,0.5)",
-    cardShadow: "0 8px 24px rgba(29,78,216,.08)",
+    cardBg: "rgba(255,255,255,0.88)",
+    cardBorder: "rgba(29,78,216,0.12)",
+    cardShadow: "0 4px 16px rgba(29,78,216,.06), 0 1px 2px rgba(15,23,42,.06)",
     navDefaultBg: "rgba(255,255,255,0.85)",
     navDefaultBorder: "rgba(147,197,253,0.45)",
     navDefaultShadow: "0 2px 8px rgba(0,0,0,0.02)",
@@ -1123,12 +1118,17 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
   return (
     <div className="flex gap-5 p-5">
       <div
+        <div
         className="flex-1 flex flex-col rounded-xl overflow-hidden"
-        style={{
-          backgroundColor: currentThemeMode === "glass" ? "rgba(255,255,255,0.20)" : c.surface,
-          border: `1px solid ${currentThemeMode === "glass" ? "rgba(255,255,255,0.35)" : c.border}`,
-          boxShadow: currentThemeMode === "glass" ? "0 12px 40px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" : `0 4px 16px -6px ${c.bg}`,
-        }}
+        style={
+          currentThemeMode === "glass"
+            ? {
+                backgroundColor: "rgba(255,255,255,0.20)",
+                border: "1px solid rgba(255,255,255,0.35)",
+                boxShadow: "0 12px 40px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+              }
+            : cardStyle()
+        }
       >
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px dashed ${c.border}` }}>
           <span className="text-sm font-semibold" style={{ color: c.text }}>Keranjang</span>
