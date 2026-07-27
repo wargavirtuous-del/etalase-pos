@@ -1197,7 +1197,7 @@ function KasirScreen({ data, persist, currentUser, displayMode, printerBridgeUrl
                 </button>
               </div>
               <div className="flex gap-1.5">
-                {[{ key: "qris", icon: QrCode, label: "qris" }, { key: "debit", icon: CreditCard, label: "debit" }, { key: "cashless", icon: Wallet, label: "cashless (F5)" }].map(({ key, icon: Icon, label }) => (
+                {[{ key: "cashless", icon: Wallet, label: "cashless (F5)" }].map(({ key, icon: Icon, label }) => (
                   <button key={key} onClick={() => addPayment(key, Math.max(sisa, 0))} disabled={sisa <= 0} className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
                     <Icon size={14} />{label}
                   </button>
