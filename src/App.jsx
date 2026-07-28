@@ -2623,7 +2623,8 @@ function LaporanScreen({ data }) {
   const stokRows = (data.products || []).filter(p =>
     (p.nama + p.sku + p.barcode).toLowerCase().includes(searchJumlahBarang.toLowerCase())
   );
-// Fungsi untuk download Excel (CSV) sesuai tab yang sedang aktif
+
+  // Fungsi untuk download Excel (CSV) sesuai tab yang sedang aktif
   const handleDownloadCSV = () => {
     let header = [];
     let rows = [];
@@ -2651,6 +2652,7 @@ function LaporanScreen({ data }) {
     a.click();
     URL.revokeObjectURL(url);
   };
+
   return (
     <div className="p-5" style={{ color: c.text }}>
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
@@ -2670,6 +2672,28 @@ function LaporanScreen({ data }) {
           </button>
         ))}
       </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: c.textDim }}>
+          Menu Laporan: {subLaporan}
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleDownloadCSV} 
+            className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" 
+            style={{ backgroundColor: c.surface, color: "#16A34A", border: `1px solid ${c.border}` }}
+          >
+            <FileSpreadsheet size={13} /> Excel (CSV)
+          </button>
+          
+          <button 
+            onClick={() => window.print()} 
+            className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" 
+            style={{ backgroundColor: c.surface, color: "#DC2626", border: `1px solid ${c.border}` }}
+          >
+            <FileText size={13} /> Simpan PDF / Word
+          </button>
+        </div>
       </div>
 
       {subLaporan === "riwayat" && (
@@ -2685,8 +2709,6 @@ function LaporanScreen({ data }) {
               const isExpanded = expandedInvoice === trx.id;
               return (
                 <div key={trx.id} className="rounded-xl overflow-hidden transition-all duration-200" style={{ backgroundColor: isExpanded ? c.surfaceAlt : c.surface, border: `1px solid ${c.border}` }}>
-                  
-                  {/* Bagian Accordion Header (Klik untuk Buka/Tutup) */}
                   <div 
                     onClick={() => setExpandedInvoice(isExpanded ? null : trx.id)}
                     className="flex justify-between items-center p-4 cursor-pointer hover:opacity-80"
@@ -2704,7 +2726,6 @@ function LaporanScreen({ data }) {
                     </div>
                   </div>
 
-                  {/* Isi Detail (Hanya muncul jika isExpanded === true) */}
                   {isExpanded && (
                     <div className="p-4" style={{ borderTop: `1px dashed ${c.border}`, backgroundColor: c.surfaceAlt }}>
                       <div className="flex justify-end mb-3">
@@ -2857,122 +2878,6 @@ function LaporanScreen({ data }) {
           </div>
         </div>
       )}
-
-    </div>
-  );
-}
-      
-      
-
-export default function App() {
-  const [tab, setTab] = useState("kasir");
-  const [currentUser, setCurrentUser] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const { settings, update } = useSettings();
-  const { accounts, update: updateAccounts } = useAccounts();
-  const { data, persist, status } = useStorage();
-
-  applyTheme(settings.theme, settings.glassColorTheme);
-
-  if (status === "loading" || !data) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: c.bg }}>
-        <div className="flex items-center gap-2" style={{ color: c.textDim }}>
-          <Loader2 size={16} className="animate-spin" /> Memuat data...
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
-  }
-
-  const isGlass = settings.theme === "glass";
-  const glassTheme = GLASS_THEMES[settings.glassColorTheme] || GLASS_THEMES.aurora;
-  const lightMeta = LIGHT_THEME_META[settings.theme] || null;
-
-  return (
-    <div
-      className={`relative w-full min-h-screen font-sans ${isGlass ? "glass-mode" : ""}`}
-      style={{
-        backgroundColor: c.bg,
-        ...(isGlass ? { background: glassTheme.gradient, "--glass-blur": `${settings.glassBlur}px` } : {}),
-        ...(lightMeta ? { background: lightMeta.pageGradient } : {}),
-      }}
-    >
-   {isGlass && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="absolute rounded-full anim-drift-1" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
-          <div className="absolute rounded-full anim-drift-2" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
-          <div className="absolute rounded-full anim-drift-3" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: glassTheme.tabTint?.[tab] || "transparent", transition: "background-color 300ms ease" }}
-          />
-        </div>
-      )}
-      {lightMeta && lightMeta.auroraColors && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div
-            className="absolute anim-aurora"
-            style={{
-              width: "180%",
-              height: "180%",
-              top: "-40%",
-              left: "-40%",
-              opacity: 0.18,
-              filter: "blur(90px)",
-              background: `conic-gradient(from 0deg at 50% 50%, ${lightMeta.auroraColors.join(", ")}, ${lightMeta.auroraColors[0]})`,
-            }}
-          />
-        </div>
-      )}
-      <div
-        className="px-5 pt-3 pb-1 flex items-center justify-between"
-        style={themeMeta() ? { backgroundColor: "rgba(255,255,255,0.5)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } : undefined}
-      >
-        <div>
-          <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
-            Aspho Cash <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: c.textDim }}>Data tersimpan otomatis di sesi kamu</p>
-        </div>
-       <div className="flex items-center gap-2">
-          {/* TOMBOL PENGATURAN KEMBALI DIMUNCULKAN */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-            style={{ backgroundColor: c.surfaceAlt, color: c.textDim, border: `1px solid ${c.border}` }}
-            aria-label="Pengaturan"
-          >
-            <SettingsIcon size={16} />
-          </button>
-
-          <span
-            className="text-xs px-3 py-1.5 rounded-lg capitalize hidden sm:block"
-            style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
-          >
-            {currentUser.id} · {currentUser.role}
-          </span>
-          
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium"
-            style={{ backgroundColor: c.coralDim, color: c.coral }}
-          >
-            Keluar
-          </button>
-        </div>
-      </div>
-      <Nav tab={tab} setTab={setTab} />
-      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} printerBridgeUrl={settings.printerBridgeUrl} glassColorTheme={settings.glassColorTheme} />}
-      {tab === "katalog" && <KatalogScreen data={data} />}
-      {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
-      {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
-      {tab === "laporan" && <LaporanScreen data={data} />}
-      {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />}
-      <ScrollToTopButton />
     </div>
   );
 }
