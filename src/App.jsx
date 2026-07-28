@@ -4,9 +4,8 @@ import { Document, Packer, Table, TableRow, TableCell, Paragraph, TextRun, Image
 import {
   ShoppingCart, ArrowRightLeft, ClipboardCheck, Plus, Minus, Trash2,
   X, Check, AlertTriangle, Package, Banknote, CreditCard, QrCode, Search,
-  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp, FileText, TrendingUp
+  BarChart3, Grid3x3, List, Barcode as BarcodeIcon, Printer, Loader2, Settings as SettingsIcon, Wallet, ArrowUp, FileText, TrendingUp, FileSpreadsheet
 } from "lucide-react";
-import { Search, Printer, FileSpreadsheet, FileText, Grid3x3, List, Wallet } from "lucide-react";
 
 const darkPalette = {
   bg: "#12171A",
@@ -2764,14 +2763,6 @@ function LaporanScreen({ data, persist }) {
     </div>
   );
 }
-{selectedInvoice && (
-  <InvoiceDetailModal trx={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
-)}
-      {openReport === "analisis" && (
-        <ReportModal title="Analisis Produk" onClose={() => setOpenReport(null)}>
-          <ProductAnalysis data={data} />
-        </ReportModal>
-      )}
 
       {openReport === "laba" && (
         <ReportModal title="Laba per Kategori" onClose={() => setOpenReport(null)}>
@@ -2943,49 +2934,7 @@ export default function App() {
           >
             {currentUser.id} · {currentUser.role}
           </span>
-          <button
-  onClick={() => {
-    // 1. Membuka jendela cetak baru yang bersih
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    if (printWindow) {
-      // 2. Menulis struktur HTML sederhana khusus format nota
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Cetak Nota - ${trx.id || 'Transaksi'}</title>
-            <style>
-              body {
-                font-family: monospace;
-                font-size: 12px;
-                padding: 10px;
-                color: #000;
-              }
-              pre {
-                white-space: pre-wrap;
-                word-wrap: break-word;
-              }
-            </style>
-          </head>
-          <body>
-            <pre>${formatNotaTeks(trx)}</pre>
-            <script>
-              window.onload = function() {
-                window.print();
-                window.close();
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-    }
-  }}
-  className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
-  style={{ backgroundColor: c.mint, color: "#0B1210" }}
->
-  {}
-  <Printer size={13} /> Cetak Ulang Nota
-</button>
+          
           <button
             onClick={() => setCurrentUser(null)}
             className="text-xs px-3 py-1.5 rounded-lg font-medium"
