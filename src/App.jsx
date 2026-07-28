@@ -2623,7 +2623,34 @@ function LaporanScreen({ data }) {
   const stokRows = (data.products || []).filter(p =>
     (p.nama + p.sku + p.barcode).toLowerCase().includes(searchJumlahBarang.toLowerCase())
   );
+// Fungsi untuk download Excel (CSV) sesuai tab yang sedang aktif
+  const handleDownloadCSV = () => {
+    let header = [];
+    let rows = [];
 
+    if (subLaporan === "riwayat") {
+      header = ["ID Invoice", "Waktu", "Kasir", "Total Transaksi"];
+      rows = riwayatList.map(t => `"${t.id}","${fmtWaktu(t.tanggal)}","${t.kasir || '-'}","${t.total}"`);
+    } else if (subLaporan === "laba") {
+      header = ["Waktu", "Kategori", "Nama Barang", "Qty Terjual", "Omzet", "Laba Bersih"];
+      rows = labaRows.map(r => `"${fmtWaktu(r.waktu)}","${r.kategori}","${r.nama}","${r.qty}","${r.omzet}","${r.laba}"`);
+    } else if (subLaporan === "jumlahBarang") {
+      header = ["SKU/Barcode", "Nama Barang", "Stok Gudang", "Stok Etalase", "Total Tersedia"];
+      rows = stokRows.map(r => `"${r.sku || '-'}","${r.nama}","${r.gudang || 0}","${r.etalase || 0}","${(r.gudang || 0) + (r.etalase || 0)}"`);
+    } else if (subLaporan === "analisis") {
+      alert("Tampilan Analisis Produk lebih baik diunduh menggunakan tombol PDF.");
+      return;
+    }
+
+    const csvContent = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Laporan_Aspho_${subLaporan}_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="p-5" style={{ color: c.text }}>
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
@@ -2643,23 +2670,6 @@ function LaporanScreen({ data }) {
           </button>
         ))}
       </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: c.textDim }}>
-          Menu Laporan: {subLaporan}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Tombol Cetak Global Diganti Jadi Download Word, Excel, PDF */}
-          <button onClick={() => alert("Fitur unduh Word sedang dalam penyesuaian")} className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" style={{ backgroundColor: c.surface, color: "#2563EB", border: `1px solid ${c.border}` }}>
-            <FileText size={13} /> Word
-          </button>
-          <button onClick={() => alert("Fitur unduh Excel (CSV) sedang dalam penyesuaian")} className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" style={{ backgroundColor: c.surface, color: "#16A34A", border: `1px solid ${c.border}` }}>
-            <FileSpreadsheet size={13} /> Excel
-          </button>
-          <button onClick={() => alert("Fitur unduh PDF sedang dalam penyesuaian")} className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" style={{ backgroundColor: c.surface, color: "#DC2626", border: `1px solid ${c.border}` }}>
-            <FileText size={13} /> PDF
-          </button>
-        </div>
       </div>
 
       {subLaporan === "riwayat" && (
