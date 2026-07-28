@@ -2829,7 +2829,6 @@ function LaporanScreen({ data }) {
   );
 }
 
-export default function App() {
  
   const { data, persist, status } = useStorage();
   const { settings, update } = useSettings();
