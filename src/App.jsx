@@ -2847,12 +2847,9 @@ function LaporanScreen({ data }) {
 
   return (
     <div className="min-h-screen text-sm transition-colors duration-300" style={{ backgroundColor: c.bg, color: c.text }}>
-       {}
     </div>
   );
 }
-
-
 
 function Nav({ tab, setTab }) {
   const items = [
