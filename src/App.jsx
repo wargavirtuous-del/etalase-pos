@@ -744,75 +744,6 @@ function LoginGate({ onLogin, accounts }) {
   );
 }
 
-function Nav({ tab, setTab }) {
-  const items = [
-    { key: "kasir", label: "Kasir", icon: ShoppingCart, desc: "Layar transaksi utama — cari/scan barang, hitung pembayaran, cetak struk." },
-    { key: "katalog", label: "Katalog", icon: Grid3x3, desc: "Daftar semua barang & harga, bisa tampilan bergambar atau teks saja." },
-    { key: "gudang", label: "Gudang & Transfer", icon: ArrowRightLeft, desc: "Kelola stok gudang, transfer ke etalase, tambah/edit/hapus barang, cetak label barcode." },
-    { key: "opname", label: "Stok Opname", icon: ClipboardCheck, desc: "Cocokkan stok yang tercatat di sistem dengan stok fisik hasil hitung manual." },
-    { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Ringkasan omzet, laba per kategori, dan riwayat transaksi per kasir." },
-  ];
-  const btnRefs = useRef([]);
-  const m = themeMeta();
-
-  // Navigasi tab pakai panah kiri/kanan (pengganti mouse) — aktif saat fokus ada di salah satu tab.
-  const handleNavKey = (e, idx) => {
-    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      e.preventDefault();
-      const dir = e.key === "ArrowRight" ? 1 : -1;
-      const nextIdx = (idx + dir + items.length) % items.length;
-      setTab(items[nextIdx].key);
-      btnRefs.current[nextIdx]?.focus();
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      setTab(items[idx].key);
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap gap-1.5 px-5 pt-3 pb-2.5 border-b" style={{ borderColor: c.border }}>
-      {items.map((it, idx) => {
-        const active = tab === it.key;
-        const Icon = it.icon;
-        const glassNav = m && (m.navDefaultBg || m.navActiveBg);
-        const navStyle = glassNav
-          ? {
-              backgroundColor: active ? m.navActiveBg : (m.navDefaultBg || "transparent"),
-              color: active ? (m.accent || c.mint) : c.textDim,
-              border: `1px solid ${active ? m.navActiveBorder : (m.navDefaultBorder || "transparent")}`,
-              backdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
-              WebkitBackdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
-              borderRadius: Math.min(m.radius, 12),
-            }
-          : {
-              backgroundColor: active ? c.mintDim : "transparent",
-              color: active ? c.mint : c.textDim,
-              border: `1px solid ${active ? c.mint : "transparent"}`,
-            };
-        return (
-          <div key={it.key} className="relative group">
-            <button
-              ref={(el) => (btnRefs.current[idx] = el)}
-              onClick={() => setTab(it.key)}
-              onKeyDown={(e) => handleNavKey(e, idx)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={navStyle}
-            >
-              <Icon size={15} />
-              {it.label}
-            </button>
-            <div
-              className="absolute left-0 top-full mt-1 w-56 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-opacity z-50"
-              style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
-            >
-              {it.desc}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function useModalKeys(isOpen, onConfirm, onCancel) {
   useEffect(() => {
@@ -2921,3 +2852,115 @@ export default function App() {
     </div>
   );
 }
+
+
+function useModalKeys(isOpen, onConfirm, onClose) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && onClose) onClose();
+      
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+}
+
+
+function Nav({ tab, setTab }) {
+  const items = [
+    { key: "kasir", label: "Kasir", icon: ShoppingCart, desc: "Layar transaksi utama" },
+    { key: "katalog", label: "Katalog", icon: Grid3x3, desc: "Daftar semua barang & harga" },
+    { key: "gudang", label: "Gudang", icon: Package, desc: "Manajemen stok dan barang" },
+    { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Laporan penjualan harian" },
+  ];
+
+  return (
+    <div className="flex gap-2 p-2 border-b" style={{ borderColor: c.border, backgroundColor: c.surface }}>
+      {items.map((item) => (
+        <button
+          key={item.key}
+          onClick={() => setTab(item.key)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: tab === item.key ? c.mint : "transparent",
+            color: tab === item.key ? "#111" : c.textDim,
+          }}
+        >
+          <item.icon size={16} />
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+function App() {
+  const { data, persist, status } = useStorage();
+  const { settings, update: updateSettings } = useSettings();
+  const { accounts, update: updateAccounts } = useAccounts();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [activeTab, setActiveTab] = useState("kasir");
+  const [showSettings, setShowSettings] = useState(false);
+
+ 
+  useEffect(() => {
+    applyTheme(settings.theme, settings.glassColorTheme);
+  }, [settings.theme, settings.glassColorTheme]);
+
+
+  if (status === "loading") {
+    return <div className="min-h-screen flex items-center justify-center text-white" style={{ background: darkPalette.bg }}>Loading...</div>;
+  }
+
+
+  if (!currentUser) {
+    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
+  }
+
+
+  return (
+    <div className="min-h-screen transition-colors duration-300 flex flex-col" style={{ backgroundColor: c.bg, color: c.text }}>
+      {/* Header / Navigasi Atas */}
+      <header className="flex justify-between items-center p-4 border-b" style={{ borderColor: c.border, backgroundColor: c.surfaceAlt }}>
+        <h1 className="text-xl font-bold">{STORE_NAME}</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm" style={{ color: c.textDim }}>Halo, {currentUser.id}</span>
+          <button onClick={() => setShowSettings(true)} className="p-2 rounded-full hover:opacity-80" style={{ backgroundColor: c.surface }}>
+            <SettingsIcon size={18} color={c.text} />
+          </button>
+          <button onClick={() => setCurrentUser(null)} className="text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: c.coral, color: "#fff" }}>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {}
+      <Nav tab={activeTab} setTab={setActiveTab} />
+
+      {/* Area Konten Utama */}
+      <main className="flex-1 p-4 overflow-auto">
+        {activeTab === "kasir" && <div>Komponen Kasir Anda di sini...</div>}
+        {activeTab === "katalog" && <div>Komponen Katalog Anda di sini...</div>}
+        {activeTab === "gudang" && <div>Komponen Gudang Anda di sini...</div>}
+        {activeTab === "laporan" && <div>Komponen Laporan Anda di sini...</div>}
+      </main>
+
+      {}
+      {showSettings && (
+        <SettingsModal 
+          settings={settings} 
+          update={updateSettings} 
+          onClose={() => setShowSettings(false)} 
+          currentUser={currentUser} 
+          accounts={accounts} 
+          updateAccounts={updateAccounts} 
+        />
+      )}
+    </div>
+  );
+}
+
+
+export default App;
