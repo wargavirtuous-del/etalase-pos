@@ -2695,7 +2695,23 @@ function LaporanScreen({ data }) {
           </button>
         </div>
       </div>
-
+<div className="flex items-center gap-2">
+          <button 
+            onClick={handleDownloadCSV} 
+            className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" 
+            style={{ backgroundColor: c.surface, color: "#16A34A", border: `1px solid ${c.border}` }}
+          >
+            <FileSpreadsheet size={13} /> Excel (CSV)
+          </button>
+          
+          <button 
+            onClick={() => window.print()} 
+            className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 cursor-pointer" 
+            style={{ backgroundColor: c.surface, color: "#DC2626", border: `1px solid ${c.border}` }}
+          >
+            <FileText size={13} /> Simpan PDF / Word
+          </button>
+        </div>
       {subLaporan === "riwayat" && (
         <div className="space-y-3">
           <DateRangeFilter range={rangeRiwayat} setRange={setRangeRiwayat} />
