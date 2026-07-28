@@ -2561,94 +2561,120 @@ function InvoiceDetailModal({ trx, onClose }) {
     </div>
   );
 }
-function LaporanScreen({ data, persist }) {
+function LaporanScreen({ data }) {
   const [subLaporan, setSubLaporan] = useState("riwayat");
-  const [filterJumlahBarang, setFilterJumlahBarang] = useState("harian");
+
+  // --- STATE FILTER ---
+  const [rangeRiwayat, setRangeRiwayat] = useState({ preset: "semua" });
+  const [searchRiwayat, setSearchRiwayat] = useState("");
+
+  const [rangeLaba, setRangeLaba] = useState({ preset: "bulan", start: new Date(new Date().getFullYear(), new Date().getMonth(), 1), end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999) });
+  const [searchLaba, setSearchLaba] = useState("");
+
   const [searchJumlahBarang, setSearchJumlahBarang] = useState("");
+
+  // --- LOGIKA DATA ---
+  const fmtWaktu = (iso) => new Date(iso).toLocaleString("id-ID");
+
+  // 1. Data Riwayat Transaksi
+  const riwayatList = (data.transactions || [])
+    .filter(t => inDateRange(t.tanggal, rangeRiwayat))
+    .filter(t => 
+      t.id.toLowerCase().includes(searchRiwayat.toLowerCase()) || 
+      t.kasir.toLowerCase().includes(searchRiwayat.toLowerCase()) ||
+      t.items.some(it => it.nama.toLowerCase().includes(searchRiwayat.toLowerCase()))
+    );
+
+  // 2. Data Laba Rugi (Per Item)
+  const labaRows = (data.transactions || [])
+    .filter(t => inDateRange(t.tanggal, rangeLaba))
+    .flatMap(t => t.items.map(it => ({
+      waktu: t.tanggal,
+      kategori: it.kategori || "Umum",
+      nama: it.nama,
+      qty: it.qty,
+      omzet: it.harga * it.qty,
+      laba: (it.harga - (it.hargaBeli || 0)) * it.qty
+    })))
+    .filter(r => (r.nama + r.kategori).toLowerCase().includes(searchLaba.toLowerCase()));
+
+  const totalOmzetLaba = labaRows.reduce((sum, r) => sum + r.omzet, 0);
+  const totalLabaKotor = labaRows.reduce((sum, r) => sum + r.laba, 0);
+
+  // 3. Data Stok Barang
+  const stokRows = (data.products || []).filter(p =>
+    (p.nama + p.sku + p.barcode).toLowerCase().includes(searchJumlahBarang.toLowerCase())
+  );
 
   return (
     <div className="p-5" style={{ color: c.text }}>
       
       {/* ================= NAVIGASI TAB LAPORAN ================= */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-        <button 
-          onClick={() => setSubLaporan("riwayat")} 
-          className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
-          style={{ backgroundColor: subLaporan === "riwayat" ? c.mintDim : c.surfaceAlt, color: subLaporan === "riwayat" ? c.mint : c.textDim }}
-        >
-          Riwayat Transaksi
-        </button>
-        <button 
-          onClick={() => setSubLaporan("laba")} 
-          className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
-          style={{ backgroundColor: subLaporan === "laba" ? c.mintDim : c.surfaceAlt, color: subLaporan === "laba" ? c.mint : c.textDim }}
-        >
-          Laba Rugi
-        </button>
-        <button 
-          onClick={() => setSubLaporan("analisis")} 
-          className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
-          style={{ backgroundColor: subLaporan === "analisis" ? c.mintDim : c.surfaceAlt, color: subLaporan === "analisis" ? c.mint : c.textDim }}
-        >
-          Analisis Produk
-        </button>
-        <button 
-          onClick={() => setSubLaporan("jumlahBarang")} 
-          className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
-          style={{ backgroundColor: subLaporan === "jumlahBarang" ? c.mintDim : c.surfaceAlt, color: subLaporan === "jumlahBarang" ? c.mint : c.textDim }}
-        >
-          Jumlah Barang (Stok)
-        </button>
+        {[
+          { id: "riwayat", label: "Riwayat Transaksi" },
+          { id: "laba", label: "Laba Rugi" },
+          { id: "analisis", label: "Analisis Produk" },
+          { id: "jumlahBarang", label: "Audit Stok Barang" }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setSubLaporan(tab.id)} 
+            className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap" 
+            style={{ backgroundColor: subLaporan === tab.id ? c.mintDim : c.surfaceAlt, color: subLaporan === tab.id ? c.mint : c.textDim }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* ================= TOMBOL AKSI UNIVERSAL (CETAK & EKSPOR) ================= */}
+      {/* ================= TOMBOL AKSI UNIVERSAL ================= */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
         <div className="text-xs font-medium uppercase tracking-wider" style={{ color: c.textDim }}>
           Menu Laporan: {subLaporan}
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => window.print()}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-            style={{ backgroundColor: c.surface, color: c.text, border: `1px solid ${c.border}` }}
-          >
-            <Printer size={13} /> Cetak Langsung
-          </button>
-          <button 
-            onClick={() => alert("Mengunduh data laporan ke format Excel (CSV)...")}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-            style={{ backgroundColor: c.surface, color: c.mint, border: `1px solid ${c.border}` }}
-          >
-            <FileSpreadsheet size={13} /> Excel
-          </button>
-          <button 
-            onClick={() => window.print()}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-            style={{ backgroundColor: c.surface, color: "#EF4444", border: `1px solid ${c.border}` }}
-          >
-            <FileText size={13} /> PDF / Word
+          <button onClick={() => window.print()} className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5" style={{ backgroundColor: c.surface, color: c.text, border: `1px solid ${c.border}` }}>
+            <Printer size={13} /> Cetak
           </button>
         </div>
       </div>
 
-      {/* ================= 1. TAB RIWAYAT TRANSAKSI & CETAK ULANG NOTA ================= */}
+      {/* ================= 1. TAB RIWAYAT TRANSAKSI ================= */}
       {subLaporan === "riwayat" && (
         <div className="space-y-3">
-          {data.riwayat && data.riwayat.length > 0 ? (
-            data.riwayat.map((trx, idx) => (
-              <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-mono" style={{ color: c.textDim }}>{trx.id || `Trx #${idx+1}`} - {trx.tanggal}</span>
+          <DateRangeFilter range={rangeRiwayat} setRange={setRangeRiwayat} />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+            <Search size={14} color={c.textDim} />
+            <input value={searchRiwayat} onChange={(e) => setSearchRiwayat(e.target.value)} placeholder="Cari ID invoice, kasir, atau nama barang..." className="bg-transparent outline-none text-sm w-full" style={{ color: c.text }} />
+          </div>
+
+          {riwayatList.length > 0 ? (
+            riwayatList.map((trx) => (
+              <div key={trx.id} className="p-4 rounded-xl" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+                <div className="flex justify-between items-center mb-2" style={{ borderBottom: `1px dashed ${c.border}`, paddingBottom: 8 }}>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: c.text }}>{trx.id}</p>
+                    <p className="text-xs" style={{ color: c.textDim }}>{fmtWaktu(trx.tanggal)} • Kasir: {trx.kasir || "-"}</p>
+                  </div>
                   
                   {/* Tombol Cetak Ulang Nota */}
                   <button
                     onClick={() => {
-                      const printWindow = window.open('', '_blank', 'width=400,height=600');
+                      const printWindow = window.open('', '_blank', 'width=350,height=600');
                       if (printWindow) {
                         printWindow.document.write(`
                           <html>
-                            <head><title>Cetak Nota</title><style>body{font-family:monospace;font-size:12px;padding:10px;}</style></head>
-                            <body><pre>${typeof formatNotaTeks === 'function' ? formatNotaTeks(trx) : JSON.stringify(trx, null, 2)}</pre><script>window.onload=function(){window.print();window.close();};</script></body>
+                            <head><title>Cetak Nota ${trx.id}</title><style>body{font-family:monospace;font-size:12px;padding:20px;}</style></head>
+                            <body>
+                              <h3 style="margin:0">ASPHO CASH</h3>
+                              <p style="margin:0">${trx.id}<br/>${fmtWaktu(trx.tanggal)}</p>
+                              <hr/>
+                              ${trx.items.map(i => `<div style="display:flex;justify-content:space-between"><span>${i.nama} (x${i.qty})</span><span>Rp${(i.harga*i.qty).toLocaleString('id-ID')}</span></div>`).join('')}
+                              <hr/>
+                              <div style="display:flex;justify-content:space-between;font-weight:bold"><span>Total</span><span>Rp${trx.total.toLocaleString('id-ID')}</span></div>
+                              <script>window.onload=function(){window.print();window.close();};</script>
+                            </body>
                           </html>
                         `);
                         printWindow.document.close();
@@ -2657,103 +2683,130 @@ function LaporanScreen({ data, persist }) {
                     className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
                     style={{ backgroundColor: c.mint, color: "#0B1210" }}
                   >
-                    <Printer size={13} /> Cetak Ulang Nota
+                    <Printer size={13} /> Cetak Nota
                   </button>
                 </div>
 
                 <div className="text-xs space-y-1" style={{ color: c.text }}>
                   {trx.items?.map((it, i) => (
                     <div key={i} className="flex justify-between">
-                      <span>{it.nama} (x{it.qty})</span>
-                      <span>Rp {(it.harga * it.qty).toLocaleString()}</span>
+                      <span>{it.nama} <span style={{color: c.textDim}}>x{it.qty}</span></span>
+                      <span className="font-mono">Rp {(it.harga * it.qty).toLocaleString('id-ID')}</span>
                     </div>
                   ))}
+                  <div className="flex justify-between font-bold pt-2 mt-2" style={{ borderTop: `1px solid ${c.border}`, color: c.mint }}>
+                    <span>TOTAL</span>
+                    <span className="font-mono">Rp {trx.total.toLocaleString('id-ID')}</span>
+                  </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-xs" style={{ color: c.textDim }}>Belum ada riwayat transaksi.</div>
+            <div className="text-center py-8 text-xs" style={{ color: c.textDim }}>Belum ada riwayat transaksi pada periode/pencarian ini.</div>
           )}
         </div>
       )}
 
       {/* ================= 2. TAB LABA RUGI ================= */}
       {subLaporan === "laba" && (
-        <div className="p-4 rounded-xl text-xs" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-          <p className="font-semibold mb-2" style={{ color: c.text }}>Laporan Laba Rugi</p>
-          <p style={{ color: c.textDim }}>Rekapitulasi total pendapatan, modal, dan laba bersih sesuai periode waktu.</p>
+        <div className="space-y-4">
+          <DateRangeFilter range={rangeLaba} setRange={setRangeLaba} />
+          
+          <div className="grid grid-cols-2 gap-3 mb-2">
+            <div className="p-4 rounded-xl" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+              <p className="text-xs mb-1" style={{ color: c.textDim }}>Total Omzet (Kotor)</p>
+              <p className="text-xl font-bold font-mono" style={{ color: c.text }}>{rupiah(totalOmzetLaba)}</p>
+            </div>
+            <div className="p-4 rounded-xl" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
+              <p className="text-xs mb-1" style={{ color: c.textDim }}>Total Laba (Bersih)</p>
+              <p className="text-xl font-bold font-mono" style={successTextStyle()}>{rupiah(totalLabaKotor)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+            <Search size={14} color={c.textDim} />
+            <input value={searchLaba} onChange={(e) => setSearchLaba(e.target.value)} placeholder="Cari nama barang atau kategori..." className="bg-transparent outline-none text-sm w-full" style={{ color: c.text }} />
+          </div>
+
+          <div className="rounded-xl overflow-hidden" style={tableWrapStyle()}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim }}>
+                  <th className="text-left px-4 py-2 font-medium">Waktu</th>
+                  <th className="text-left px-4 py-2 font-medium">Barang</th>
+                  <th className="text-right px-4 py-2 font-medium">Qty</th>
+                  <th className="text-right px-4 py-2 font-medium">Omzet</th>
+                  <th className="text-right px-4 py-2 font-medium">Laba</th>
+                </tr>
+              </thead>
+              <tbody>
+                {labaRows.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Tidak ada data laba.</td></tr>
+                )}
+                {labaRows.map((r, idx) => (
+                  <tr key={idx} style={{ backgroundColor: c.surface, borderTop: `1px solid ${c.border}` }}>
+                    <td className="px-4 py-2 text-xs" style={{ color: c.textDim }}>{fmtWaktu(r.waktu)}</td>
+                    <td className="px-4 py-2" style={{ color: c.text }}>{r.nama} <br/><span className="text-[10px]" style={{color:c.textDim}}>{r.kategori}</span></td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{r.qty}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={{ color: c.text }}>{rupiah(r.omzet)}</td>
+                    <td className="px-4 py-2 text-right font-mono" style={successTextStyle()}>{rupiah(r.laba)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* ================= 3. TAB ANALISIS PRODUK ================= */}
       {subLaporan === "analisis" && (
-        <div className="p-4 rounded-xl text-xs" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-          <p className="font-semibold mb-2" style={{ color: c.text }}>Analisis Produk</p>
-          <p style={{ color: c.textDim }}>Statistik produk terlaris dan kontribusi keuntungan tiap barang.</p>
-        </div>
+        <ProductAnalysis data={data} />
       )}
 
       {/* ================= 4. TAB JUMLAH BARANG (STOK) ================= */}
       {subLaporan === "jumlahBarang" && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }}>
-            <div className="flex items-center gap-1.5 overflow-x-auto">
-              {["harian", "mingguan", "bulanan", "triwulan", "tahunan"].map((tipe) => (
-                <button
-                  key={tipe}
-                  onClick={() => setFilterJumlahBarang(tipe)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize whitespace-nowrap cursor-pointer"
-                  style={{
-                    backgroundColor: filterJumlahBarang === tipe ? c.mint : c.surface,
-                    color: filterJumlahBarang === tipe ? "#0B1210" : c.text,
-                    border: `1px solid ${c.border}`
-                  }}
-                >
-                  {tipe}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1 min-w-[200px]" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
-              <Search size={14} color={c.textDim} />
-              <input
-                value={searchJumlahBarang}
-                onChange={(e) => setSearchJumlahBarang(e.target.value)}
-                placeholder="Cari nama barang atau SKU..."
-                className="bg-transparent outline-none text-sm w-full"
-                style={{ color: c.text }}
-              />
-            </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: c.surface, border: `1px solid ${c.border}` }}>
+            <Search size={14} color={c.textDim} />
+            <input
+              value={searchJumlahBarang}
+              onChange={(e) => setSearchJumlahBarang(e.target.value)}
+              placeholder="Cari nama barang atau SKU..."
+              className="bg-transparent outline-none text-sm w-full"
+              style={{ color: c.text }}
+            />
           </div>
 
-          <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${c.border}` }}>
+          <div className="overflow-x-auto rounded-xl" style={tableWrapStyle()}>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr style={{ backgroundColor: c.surfaceAlt, color: c.textDim, borderBottom: `1px solid ${c.border}` }}>
                   <th className="p-3">SKU / Barcode</th>
                   <th className="p-3">Nama Barang</th>
-                  <th className="p-3 text-center">Stok Awal</th>
-                  <th className="p-3 text-center">Masuk</th>
-                  <th className="p-3 text-center">Keluar</th>
-                  <th className="p-3 text-center">Stok Akhir</th>
+                  <th className="p-3 text-right">Stok Gudang</th>
+                  <th className="p-3 text-right">Stok Etalase</th>
+                  <th className="p-3 text-right">Total Tersedia</th>
                 </tr>
               </thead>
               <tbody>
-                {data.barang
-                  ?.filter(item => 
-                    item.nama.toLowerCase().includes(searchJumlahBarang.toLowerCase()) || 
-                    (item.sku && item.sku.toLowerCase().includes(searchJumlahBarang.toLowerCase()))
-                  )
-                  .map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${c.border}` }}>
+                {stokRows.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-xs" style={{ color: c.textDim }}>Data barang tidak ditemukan.</td></tr>
+                )}
+                {stokRows.map((item, idx) => {
+                  const stokGudang = item.gudang || 0;
+                  const stokEtalase = item.etalase || 0;
+                  const totalStok = stokGudang + stokEtalase;
+                  
+                  return (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${c.border}`, backgroundColor: c.surface }}>
                       <td className="p-3 font-mono" style={{ color: c.textDim }}>{item.sku || "-"}</td>
                       <td className="p-3 font-medium" style={{ color: c.text }}>{item.nama}</td>
-                      <td className="p-3 text-center" style={{ color: c.text }}>{item.stok || 0}</td>
-                      <td className="p-3 text-center" style={{ color: c.mint }}>0</td>
-                      <td className="p-3 text-center" style={{ color: "#EF4444" }}>0</td>
-                      <td className="p-3 text-center font-bold" style={{ color: c.text }}>{item.stok || 0}</td>
+                      <td className="p-3 text-right font-mono" style={{ color: c.textDim }}>{stokGudang}</td>
+                      <td className="p-3 text-right font-mono" style={{ color: c.textDim }}>{stokEtalase}</td>
+                      <td className="p-3 text-right font-mono font-bold" style={{ color: c.mint }}>{totalStok}</td>
                     </tr>
-                  ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -2763,7 +2816,6 @@ function LaporanScreen({ data, persist }) {
     </div>
   );
 }
-
       
       
 
