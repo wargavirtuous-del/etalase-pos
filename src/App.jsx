@@ -2828,56 +2828,169 @@ function LaporanScreen({ data }) {
     </div>
   );
 }
-
- 
-  const { data, persist, status } = useStorage();
-  const { settings, update } = useSettings();
-  const { accounts, update: updateAccounts } = useAccounts();
-  const [currentUser, setCurrentUser] = useState(null);
-  
-
-  useEffect(() => {
-    applyTheme(settings.theme, settings.glassColorTheme);
-  }, [settings.theme, settings.glassColorTheme]);
-
- 
-  if (!currentUser) {
-    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
-  }
-
-  return (
-    <div className="min-h-screen text-sm transition-colors duration-300" style={{ backgroundColor: c.bg, color: c.text }}>
-    </div>
-  );
-
-
 function Nav({ tab, setTab }) {
   const items = [
-    { key: "kasir", label: "Kasir", icon: ShoppingCart, desc: "Layar transaksi utama" },
-    { key: "katalog", label: "Katalog", icon: Grid3x3, desc: "Daftar semua barang & harga" },
-    { key: "gudang", label: "Gudang", icon: Package, desc: "Manajemen stok dan barang" },
-    { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Laporan penjualan harian" },
+    { key: "kasir", label: "Kasir", icon: ShoppingCart, desc: "Layar transaksi utama — cari/scan barang, hitung pembayaran, cetak struk." },
+    { key: "katalog", label: "Katalog", icon: Grid3x3, desc: "Daftar semua barang & harga, bisa tampilan bergambar atau teks saja." },
+    { key: "gudang", label: "Gudang & Transfer", icon: ArrowRightLeft, desc: "Kelola stok gudang, transfer ke etalase, tambah/edit/hapus barang, cetak label barcode." },
+    { key: "opname", label: "Stok Opname", icon: ClipboardCheck, desc: "Cocokkan stok yang tercatat di sistem dengan stok fisik hasil hitung manual." },
+    { key: "laporan", label: "Laporan", icon: BarChart3, desc: "Ringkasan omzet, laba, dan riwayat transaksi." },
   ];
+  const btnRefs = useRef([]);
+  const m = themeMeta();
+
+  const handleNavKey = (e, idx) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      const nextIdx = (idx + dir + items.length) % items.length;
+      setTab(items[nextIdx].key);
+      btnRefs.current[nextIdx]?.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setTab(items[idx].key);
+    }
+  };
 
   return (
-    <div className="flex gap-2 p-2 border-b" style={{ borderColor: c.border, backgroundColor: c.surface }}>
-      {items.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => setTab(item.key)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: tab === item.key ? c.mint : "transparent",
-            color: tab === item.key ? "#111" : c.textDim,
-          }}
-        >
-          <item.icon size={16} />
-          {item.label}
-        </button>
-      ))}
+    <div className="flex flex-wrap gap-1.5 px-5 pt-3 pb-2.5 border-b" style={{ borderColor: c.border }}>
+      {items.map((it, idx) => {
+        const active = tab === it.key;
+        const Icon = it.icon;
+        const glassNav = m && (m.navDefaultBg || m.navActiveBg);
+        const navStyle = glassNav
+          ? {
+              backgroundColor: active ? m.navActiveBg : (m.navDefaultBg || "transparent"),
+              color: active ? (m.accent || c.mint) : c.textDim,
+              border: `1px solid ${active ? m.navActiveBorder : (m.navDefaultBorder || "transparent")}`,
+              backdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+              WebkitBackdropFilter: m.blur ? `blur(${Math.round(m.blur * 0.7)}px)` : undefined,
+              borderRadius: Math.min(m.radius, 12),
+            }
+          : {
+              backgroundColor: active ? c.mintDim : "transparent",
+              color: active ? c.mint : c.textDim,
+              border: `1px solid ${active ? c.mint : "transparent"}`,
+            };
+        return (
+          <div key={it.key} className="relative group">
+            <button
+              ref={(el) => (btnRefs.current[idx] = el)}
+              onClick={() => setTab(it.key)}
+              onKeyDown={(e) => handleNavKey(e, idx)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={navStyle}
+            >
+              <Icon size={15} />
+              {it.label}
+            </button>
+            <div
+              className="absolute left-0 top-full mt-1 w-56 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+              style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}
+            >
+              {it.desc}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
+export default function App() {
+  const [tab, setTab] = useState("kasir");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, update } = useSettings();
+  const { accounts, update: updateAccounts } = useAccounts();
+  const { data, persist, status } = useStorage();
 
-export default App;
+  applyTheme(settings.theme, settings.glassColorTheme);
+
+  if (status === "loading" || !data) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: c.bg }}>
+        <div className="flex items-center gap-2" style={{ color: c.textDim }}>
+          <Loader2 size={16} className="animate-spin" /> Memuat data...
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
+  }
+
+  const isGlass = settings.theme === "glass";
+  const glassTheme = GLASS_THEMES[settings.glassColorTheme] || GLASS_THEMES.aurora;
+  const lightMeta = LIGHT_THEME_META[settings.theme] || null;
+
+  return (
+    <div
+      className={`relative w-full min-h-screen font-sans ${isGlass ? "glass-mode" : ""}`}
+      style={{
+        backgroundColor: c.bg,
+        ...(isGlass ? { background: glassTheme.gradient, "--glass-blur": `${settings.glassBlur}px` } : {}),
+        ...(lightMeta ? { background: lightMeta.pageGradient } : {}),
+      }}
+    >
+      {isGlass && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="absolute rounded-full anim-drift-1" style={{ width: 480, height: 480, top: -120, left: -100, background: glassTheme.blobs[0], filter: "blur(80px)" }} />
+          <div className="absolute rounded-full anim-drift-2" style={{ width: 420, height: 420, top: "30%", right: -140, background: glassTheme.blobs[1], filter: "blur(90px)" }} />
+          <div className="absolute rounded-full anim-drift-3" style={{ width: 380, height: 380, bottom: -140, left: "20%", background: glassTheme.blobs[2], filter: "blur(90px)" }} />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: glassTheme.tabTint?.[tab] || "transparent", transition: "background-color 300ms ease" }}
+          />
+        </div>
+      )}
+      {lightMeta && lightMeta.auroraColors && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div
+            className="absolute anim-aurora"
+            style={{
+              width: "180%",
+              height: "180%",
+              top: "-40%",
+              left: "-40%",
+              opacity: 0.18,
+              filter: "blur(90px)",
+              background: `conic-gradient(from 0deg at 50% 50%, ${lightMeta.auroraColors.join(", ")}, ${lightMeta.auroraColors[0]})`,
+            }}
+          />
+        </div>
+      )}
+      <div
+        className="px-5 pt-3 pb-1 flex items-center justify-between"
+        style={themeMeta() ? { backgroundColor: "rgba(255,255,255,0.5)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } : undefined}
+      >
+        <div>
+          <p className="text-lg font-semibold tracking-tight" style={{ color: c.text }}>
+            Aspho Cash <span className="text-xs font-mono font-normal" style={{ color: c.textDim }}>v{APP_VERSION}</span>
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: c.textDim }}>Data tersimpan otomatis di sesi kamu</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-3 py-1.5 rounded-lg capitalize" style={{ backgroundColor: c.surfaceAlt, color: c.text, border: `1px solid ${c.border}` }}>
+            {currentUser.id} · {currentUser.role}
+          </span>
+          <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg" style={{ backgroundColor: c.surfaceAlt, border: `1px solid ${c.border}` }} aria-label="Buka pengaturan">
+            <SettingsIcon size={14} color={c.textDim} />
+          </button>
+          <button onClick={() => setCurrentUser(null)} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: c.coralDim, color: c.coral }}>
+            Keluar
+          </button>
+        </div>
+      </div>
+      <Nav tab={tab} setTab={setTab} />
+      {tab === "kasir" && <KasirScreen data={data} persist={persist} currentUser={currentUser} displayMode={settings.kasirDisplay} printerBridgeUrl={settings.printerBridgeUrl} glassColorTheme={settings.glassColorTheme} />}
+      {tab === "katalog" && <KatalogScreen data={data} />}
+      {tab === "gudang" && <GudangScreen data={data} persist={persist} role={currentUser.role} />}
+      {tab === "opname" && <OpnameScreen data={data} persist={persist} />}
+      {tab === "laporan" && <LaporanScreen data={data} />}
+      {showSettings && <SettingsModal settings={settings} update={update} onClose={() => setShowSettings(false)} currentUser={currentUser} accounts={accounts} updateAccounts={updateAccounts} />}
+      <ScrollToTopButton />
+    </div>
+  );
+}
