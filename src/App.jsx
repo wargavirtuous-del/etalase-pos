@@ -2854,18 +2854,6 @@ export default function App() {
 }
 
 
-function useModalKeys(isOpen, onConfirm, onClose) {
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape" && onClose) onClose();
-      
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-}
-
 
 function Nav({ tab, setTab }) {
   const items = [
@@ -2891,73 +2879,6 @@ function Nav({ tab, setTab }) {
           {item.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-
-function App() {
-  const { data, persist, status } = useStorage();
-  const { settings, update: updateSettings } = useSettings();
-  const { accounts, update: updateAccounts } = useAccounts();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("kasir");
-  const [showSettings, setShowSettings] = useState(false);
-
- 
-  useEffect(() => {
-    applyTheme(settings.theme, settings.glassColorTheme);
-  }, [settings.theme, settings.glassColorTheme]);
-
-
-  if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center text-white" style={{ background: darkPalette.bg }}>Loading...</div>;
-  }
-
-
-  if (!currentUser) {
-    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
-  }
-
-
-  return (
-    <div className="min-h-screen transition-colors duration-300 flex flex-col" style={{ backgroundColor: c.bg, color: c.text }}>
-      {/* Header / Navigasi Atas */}
-      <header className="flex justify-between items-center p-4 border-b" style={{ borderColor: c.border, backgroundColor: c.surfaceAlt }}>
-        <h1 className="text-xl font-bold">{STORE_NAME}</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm" style={{ color: c.textDim }}>Halo, {currentUser.id}</span>
-          <button onClick={() => setShowSettings(true)} className="p-2 rounded-full hover:opacity-80" style={{ backgroundColor: c.surface }}>
-            <SettingsIcon size={18} color={c.text} />
-          </button>
-          <button onClick={() => setCurrentUser(null)} className="text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: c.coral, color: "#fff" }}>
-            Logout
-          </button>
-        </div>
-      </header>
-
-      {}
-      <Nav tab={activeTab} setTab={setActiveTab} />
-
-      {/* Area Konten Utama */}
-      <main className="flex-1 p-4 overflow-auto">
-        {activeTab === "kasir" && <div>Komponen Kasir Anda di sini...</div>}
-        {activeTab === "katalog" && <div>Komponen Katalog Anda di sini...</div>}
-        {activeTab === "gudang" && <div>Komponen Gudang Anda di sini...</div>}
-        {activeTab === "laporan" && <div>Komponen Laporan Anda di sini...</div>}
-      </main>
-
-      {}
-      {showSettings && (
-        <SettingsModal 
-          settings={settings} 
-          update={updateSettings} 
-          onClose={() => setShowSettings(false)} 
-          currentUser={currentUser} 
-          accounts={accounts} 
-          updateAccounts={updateAccounts} 
-        />
-      )}
     </div>
   );
 }
