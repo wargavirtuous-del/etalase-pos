@@ -2897,3 +2897,27 @@ function LaporanScreen({ data }) {
     </div>
   );
 }
+
+export default function App() {
+ 
+  const { data, persist, status } = useStorage();
+  const { settings, update } = useSettings();
+  const { accounts, update: updateAccounts } = useAccounts();
+  const [currentUser, setCurrentUser] = useState(null);
+  
+
+  useEffect(() => {
+    applyTheme(settings.theme, settings.glassColorTheme);
+  }, [settings.theme, settings.glassColorTheme]);
+
+ 
+  if (!currentUser) {
+    return <LoginGate onLogin={setCurrentUser} accounts={accounts} />;
+  }
+
+  return (
+    <div className="min-h-screen text-sm transition-colors duration-300" style={{ backgroundColor: c.bg, color: c.text }}>
+       {}
+    </div>
+  );
+}
